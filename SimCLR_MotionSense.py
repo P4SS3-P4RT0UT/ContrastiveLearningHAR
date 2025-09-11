@@ -82,11 +82,6 @@ import requests
 import zipfile
 
 # %%
-dataset_url = 'https://github.com/mmalekzadeh/motion-sense/blob/master/data/B_Accelerometer_data.zip?raw=true'
-
-r = requests.get(dataset_url, allow_redirects=True)
-with open(working_directory + 'B_Accelerometer_data.zip', 'wb') as f:
-    f.write(r.content)
 
 # %%
 
@@ -352,10 +347,6 @@ tsne_projections = tsne_model.fit_transform(embeddings)
 # %% [markdown]
 # ### Plotting
 
-# %%
-labels_argmax = np.argmax(np_test[1], axis=1)
-unique_labels = np.unique(labels_argmax)
-
 
 # %% [markdown]
 # ### Custom Color maps (Optional)
@@ -363,24 +354,6 @@ unique_labels = np.unique(labels_argmax)
 # This section can be run to produce plots where semantically similar classes share similar colors. This requires the definition of a custom mapping of classes to colors.
 
 # %%
-# This is used to select colors for labels which are close to each other
-# Each pair corresponds to one label class
-# i.e. ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
-# The first number determines the color map, and the second determines its value along the color map
-# So 'sitting', 'standing' will share similar colors, and 'walking', 'walking upstairs', 'walking downstairs' will share another set of similar colors
-label_color_spectrum = [(0, 0), (1, 0), (1, 1), (2, 0), (2, 1), (2, 2), (3, 0)] 
-
-# This step generates a list of colors for different categories of activities
-# Here we assume 5 categories, and 5 different intesities within each category
-major_colors = ['cool', 'Blues', 'Greens', 'Oranges', 'Purples']
-color_map_base = dict (
-    [((i, j), color) for i, major_color in enumerate(major_colors) for j, color in enumerate(reversed(sns.color_palette(major_color, 5))) ]
-)
-color_palette = np.array([color_map_base[color_index] for color_index in label_color_spectrum])
-
-# %%
-
-
 # %%
 
 
