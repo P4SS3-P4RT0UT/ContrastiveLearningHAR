@@ -256,13 +256,6 @@ trained_simclr_model.save(simclr_model_save_path)
 
 
 
-# %%
-plt.figure(figsize=(12,8))
-plt.plot(epoch_losses)
-plt.ylabel("Loss")
-plt.xlabel("Epoch")
-plt.show()
-
 # %% [markdown]
 # ## Fine-tuning and Evaluation
 
@@ -330,11 +323,6 @@ training_history = full_evaluation_model.fit(
 
 full_eval_best_model = tf.keras.models.load_model(full_eval_best_model_file_name)
 
-print("Model with lowest validation Loss:")
-print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True))
-print("Model in last epoch")
-print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True))
-
 
 # %% [markdown]
 # ## Extra: t-SNE Plots
@@ -368,23 +356,6 @@ tsne_projections = tsne_model.fit_transform(embeddings)
 labels_argmax = np.argmax(np_test[1], axis=1)
 unique_labels = np.unique(labels_argmax)
 
-plt.figure(figsize=(16,8))
-graph = sns.scatterplot(
-    x=tsne_projections[:,0], y=tsne_projections[:,1],
-    hue=labels_argmax,
-    palette=sns.color_palette("hsv", len(unique_labels)),
-    s=50,
-    alpha=1.0,
-    rasterized=True
-)
-plt.xticks([], [])
-plt.yticks([], [])
-
-
-plt.legend(loc='lower left', bbox_to_anchor=(0.25, -0.3), ncol=2)
-legend = graph.legend_
-for j, label in enumerate(unique_labels):
-    legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 # %% [markdown]
 # ### Custom Color maps (Optional)
@@ -408,27 +379,6 @@ color_map_base = dict (
 color_palette = np.array([color_map_base[color_index] for color_index in label_color_spectrum])
 
 # %%
-# This selects the appropriate number of colors to be used in the plot
-labels_argmax = np.argmax(np_test[1], axis=1)
-unique_labels = np.unique(labels_argmax)
-
-plt.figure(figsize=(16,8))
-graph = sns.scatterplot(
-    x=tsne_projections[:,0], y=tsne_projections[:,1],
-    hue=labels_argmax,
-    palette=list(color_palette[unique_labels]),
-    s=50,
-    alpha=1.0,
-    rasterized=True
-)
-plt.xticks([], [])
-plt.yticks([], [])
-
-
-plt.legend(loc='lower left', bbox_to_anchor=(0.25, -0.3), ncol=2)
-legend = graph.legend_
-for j, label in enumerate(unique_labels):
-    legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 
 # %%
