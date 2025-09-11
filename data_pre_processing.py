@@ -30,7 +30,8 @@ def get_mode(np_array):
     """
     Get the mode (majority/most frequent value) from a 1D array
     """
-    return scipy.stats.mode(np_array)[0]
+    mode_result = scipy.stats.mode(np_array, keepdims=False)
+    return mode_result.mode
 
 def sliding_window_np(X, window_size, shift, stride, offset=0, flatten=None):
     """
