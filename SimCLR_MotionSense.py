@@ -266,7 +266,7 @@ tag = "linear_eval"
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
 linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=7)
 
-linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.hdf5"
+linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
     monitor='val_loss', mode='min', save_best_only=True, save_weights_only=False, verbose=0
 )
@@ -301,7 +301,7 @@ tag = "full_eval"
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
 full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="TPN", intermediate_layer=7, last_freeze_layer=4)
 
-full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.hdf5"
+full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
     monitor='val_loss', mode='min', save_best_only=True, save_weights_only=False, verbose=0
 )
