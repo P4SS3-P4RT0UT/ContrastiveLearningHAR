@@ -246,10 +246,14 @@ simclr_model.summary()
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
-simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.hdf5"
+simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
 
-
+plt.figure(figsize=(12,8))
+plt.plot(epoch_losses)
+plt.ylabel("Loss")
+plt.xlabel("Epoch")
+plt.savefig('epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -283,10 +287,10 @@ training_history = linear_evaluation_model.fit(
 
 linear_eval_best_model = tf.keras.models.load_model(linear_eval_best_model_file_name)
 
-print("Model with lowest validation Loss:")
-print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True))
-print("Model in last epoch")
-print(simclr_utitlities.evaluate_model_simple(linear_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True))
+print("Model with lowest validation Loss:", flush=True)
+print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
+print("Model in last epoch", flush=True)
+print(simclr_utitlities.evaluate_model_simple(linear_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
 
 # %% [markdown]
@@ -318,6 +322,10 @@ training_history = full_evaluation_model.fit(
 
 full_eval_best_model = tf.keras.models.load_model(full_eval_best_model_file_name)
 
+print("Model with lowest validation Loss:", flush=True)
+print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
+print("Model in last epoch", flush=True)
+print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
 # %% [markdown]
 # ## Extra: t-SNE Plots
@@ -355,6 +363,71 @@ tsne_projections = tsne_model.fit_transform(embeddings)
 
 # %%
 # %%
+
+labels_argmax = np.argmax(np_test[1], axis=1)
+unique_labels = np.unique(labels_argmax)
+
+plt.figure(figsize=(16,8))
+graph = sns.scatterplot(
+    x=tsne_projections[:,0], y=tsne_projections[:,1],
+    hue=labels_argmax,
+    palette=sns.color_palette("hsv", len(unique_labels)),
+    s=50,
+    alpha=1.0,
+    rasterized=True
+)
+plt.xticks([], [])
+plt.yticks([], [])
+
+
+plt.legend(loc='lower left', bbox_to_anchor=(0.25, -0.3), ncol=2)
+legend = graph.legend_
+for j, label in enumerate(unique_labels):
+    legend.get_texts()[j].set_text(label_list_full_name[label]) 
+
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
+
+
+
+# This is used to select colors for labels which are close to each other
+# Each pair corresponds to one label class
+# i.e. ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+# The first number determines the color map, and the second determines its value along the color map
+# So 'sitting', 'standing' will share similar colors, and 'walking', 'walking upstairs', 'walking downstairs' will share another set of similar colors
+label_color_spectrum = [(0, 0), (1, 0), (1, 1), (2, 0), (2, 1), (2, 2), (3, 0)] 
+
+# This step generates a list of colors for different categories of activities
+# Here we assume 5 categories, and 5 different intesities within each category
+major_colors = ['cool', 'Blues', 'Greens', 'Oranges', 'Purples']
+color_map_base = dict (
+    [((i, j), color) for i, major_color in enumerate(major_colors) for j, color in enumerate(reversed(sns.color_palette(major_color, 5))) ]
+)
+color_palette = np.array([color_map_base[color_index] for color_index in label_color_spectrum])
+
+# This selects the appropriate number of colors to be used in the plot
+labels_argmax = np.argmax(np_test[1], axis=1)
+unique_labels = np.unique(labels_argmax)
+
+plt.figure(figsize=(16,8))
+graph = sns.scatterplot(
+    x=tsne_projections[:,0], y=tsne_projections[:,1],
+    hue=labels_argmax,
+    palette=list(color_palette[unique_labels]),
+    s=50,
+    alpha=1.0,
+    rasterized=True
+)
+plt.xticks([], [])
+plt.yticks([], [])
+
+
+plt.legend(loc='lower left', bbox_to_anchor=(0.25, -0.3), ncol=2)
+legend = graph.legend_
+for j, label in enumerate(unique_labels):
+    legend.get_texts()[j].set_text(label_list_full_name[label]) 
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 
 
