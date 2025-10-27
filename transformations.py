@@ -120,7 +120,7 @@ def time_segment_permutation_transform_improved(X, num_segments=4):
     X_transformed = np.empty(shape=X.shape)
     for i, (sample, segments) in enumerate(zip(X, segment_points)):
         # print(sample.shape)
-        splitted = np.array(np.split(sample, np.append(segments, X.shape[1])))
+        splitted = np.split(sample, np.append(segments, X.shape[1]))
         np.random.shuffle(splitted)
         concat = np.concatenate(splitted, axis=0)
         X_transformed[i] = concat
