@@ -218,7 +218,7 @@ transform_funcs = [
 
 # trasnformation_indices = [2] # Use rotation trasnformation only
 # trasnformation_indices = [1, 2] # Use Scaling and rotation trasnformation
-trasnformation_indices = [1, 2] # Use time_segment_permutation and channel_shuffle trasnformation
+trasnformation_indices = [0, 1] # Use time_segment_permutation and channel_shuffle trasnformation
 
 #trasnform_funcs_vectorized = [
 #    transformations.noise_transform_vectorized, 
