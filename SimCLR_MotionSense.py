@@ -215,7 +215,7 @@ temperature = 0.1
 #transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
 # trasnformation_indices = [2] # Use rotation trasnformation only
-trasnformation_indices = [5, 7] # Use permutation and channel shuffle trasnformation
+trasnformation_indices = [7, 5] # Use permutation and channel shuffle trasnformation
 
 trasnform_funcs_vectorized = [
     transformations.noise_transform_vectorized, 
