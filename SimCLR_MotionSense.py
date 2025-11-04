@@ -208,11 +208,12 @@ batch_size = 512
 decay_steps = 1000
 epochs = 200
 temperature = 0.1
-#transform_funcs = [
+transform_funcs = [
+    transformations.resampling_random,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
     #transformations.rotation_transform_vectorized # Use rotation trasnformation
-#]
-#transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
+]
+transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
 # trasnformation_indices = [2] # Use rotation trasnformation only
 trasnformation_indices = [7, 5] # Use permutation and channel shuffle trasnformation
@@ -229,7 +230,7 @@ trasnform_funcs_vectorized = [
 ]
 #transform_funcs_names = ['noised', 'scaled', 'rotated', 'negated', 'time_flipped', 'permuted', 'time_warped', 'channel_shuffled']
 
-transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
+#transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
 # %%
 start_time = datetime.datetime.now()

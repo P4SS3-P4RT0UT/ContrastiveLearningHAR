@@ -2,6 +2,8 @@
 import itertools
 import numpy as np
 import scipy.interpolate
+import random
+from scipy.interpolate import interp1d
 
 __author__ = "C. I. Tang"
 __copyright__ = "Copyright (C) 2020 C. I. Tang"
@@ -34,6 +36,84 @@ https://arxiv.org/abs/1706.00527
 @inproceedings{TerryUm_ICMI2017, author = {Um, Terry T. and Pfister, Franz M. J. and Pichler, Daniel and Endo, Satoshi and Lang, Muriel and Hirche, Sandra and Fietzek, Urban and Kuli\'{c}, Dana}, title = {Data Augmentation of Wearable Sensor Data for Parkinson's Disease Monitoring Using Convolutional Neural Networks}, booktitle = {Proceedings of the 19th ACM International Conference on Multimodal Interaction}, series = {ICMI 2017}, year = {2017}, isbn = {978-1-4503-5543-8}, location = {Glasgow, UK}, pages = {216--220}, numpages = {5}, doi = {10.1145/3136755.3136817}, acmid = {3136817}, publisher = {ACM}, address = {New York, NY, USA}, keywords = {Parkinson\&#39;s disease, convolutional neural networks, data augmentation, health monitoring, motor state detection, wearable sensor}, }
 
 """
+
+def resampling_fast(X, M, N):
+    time_steps = X.shape[1]
+    raw_set = np.arange(time_steps)
+    interp_steps = np.arange(0, raw_set[-1] + 1e-1, 1 / (M + 1))
+    x_interp = interp1d(raw_set, X, axis=1)
+    x_up = x_interp(interp_steps)
+
+    length_inserted = x_up.shape[1]
+    start = random.randint(0, length_inserted - time_steps * (N + 1))
+    index_selected = np.arange(start, start + time_steps * (N + 1), N + 1)
+    return x_up[:, index_selected, :]
+
+def resampling_fast_random(X):
+    """
+    Randomly select M and N from predefined sets for resampling
+    """
+    M, N = random.choice([[1, 0], [2, 1], [3, 2]])
+    time_steps = X.shape[1]
+    raw_set = np.arange(X.shape[1])
+    interp_steps = np.arange(0, raw_set[-1] + 1e-1, 1 / (M + 1))
+    x_interp = interp1d(raw_set, X, axis=1)
+    x_up = x_interp(interp_steps)
+
+    length_inserted = x_up.shape[1]
+    start = random.randint(0, length_inserted - time_steps * (N + 1))
+    index_selected = np.arange(start, start + time_steps * (N + 1), N + 1)
+    return x_up[:, index_selected, :]
+
+def resampling(X, M, N):
+    '''
+    :param x: the data of a batch,shape=(batch_size,timesteps,features)
+    :param M: the number of  new value under tow values (number of interpolated points to insert between consecutive samples)
+    :param N: the interval of resampling (interval of downsampling, number of samples to skip)
+    :return: x after resampling，shape=(batch_size,timesteps,features)
+    '''
+    assert M > N, 'the value of M have to greater than N'
+
+    timesetps = X.shape[1]
+
+    for i in range(timesetps - 1):
+        x1 = X[:, i * (M + 1), :]
+        x2 = X[:, i * (M + 1) + 1, :]
+        for j in range(M):
+            v = np.add(x1, np.subtract(x2, x1) * (j + 1) / (M + 1))
+            X = np.insert(X, i * (M + 1) + j + 1, v, axis=1)
+
+    length_inserted = X.shape[1]
+    start = random.randint(0, length_inserted - timesetps * (N + 1))
+    index_selected = np.arange(start, start + timesetps * (N + 1), N + 1)
+    return X[:, index_selected, :]
+
+def resampling_random(X):
+    """
+    Randomly select M and N from a predefined range for resampling
+    """
+    M = random.randint(1, 3)
+    N = random.randint(0, M - 1)
+    assert M > N, 'the value of M have to greater than N'
+
+    timesetps = X.shape[1]
+
+    for i in range(timesetps - 1):
+        x1 = X[:, i * (M + 1), :]
+        x2 = X[:, i * (M + 1) + 1, :]
+        for j in range(M):
+            v = np.add(x1, np.subtract(x2, x1) * (j + 1) / (M + 1))
+            X = np.insert(X, i * (M + 1) + j + 1, v, axis=1)
+    length_inserted = X.shape[1]
+    num = X.shape[0]
+    start = random.randint(0, length_inserted - timesetps * (N + 1))
+    index_selected = np.arange(start, start + timesetps * (N + 1), N + 1)
+    x_selected = X[0, index_selected, :][np.newaxis, :]
+    for k in range(1, num):
+        start = random.randint(0, length_inserted - timesetps * (N + 1))
+        index_selected = np.arange(start, start + timesetps * (N + 1), N + 1)
+        x_selected = np.concatenate((x_selected, X[k, index_selected, :][np.newaxis, :]), axis=0)
+    return x_selected
 
 def noise_transform_vectorized(X, sigma=0.05):
     """
