@@ -35,8 +35,8 @@ def process_motion_sense_accelerometer_files(accelerometer_data_folder_path):
 
         accelerometer_data_folder_path (str):
             the path to the folder containing the data files (unzipped)
-            e.g. motionSense/B_Accelerometer_data/
-            the trial folders should be directly inside it (e.g. motionSense/B_Accelerometer_data/dws_1/)
+            e.g. UCI_HAR_Dataset/
+            the trial folders should be directly inside it (e.g. UCI_HAR_Dataset/dws_1/)
 
     Return:
         
@@ -89,8 +89,54 @@ def process_motion_sense_accelerometer_files(accelerometer_data_folder_path):
     
     return user_datasets
 
+def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
+    """
+    Preprocess the accelerometer files of the UCI HAR dataset into the 'user-list' format
 
+    Parameters:
+
+        accelerometer_data_folder_path (str):
+            the path to the folder containing the data files (unzipped)
+            e.g. UCI_HAR_Dataset/
+            the train and test folders should be directly inside it (e.g. UCI_HAR_Dataset/train/)
+
+    Return:
+        
+        user_datsets (dict of {user_id: [(features, activity_labels)]})
+            the processed dataset in a dictionary, of type {user_id: [(features, activity_labels)]}
+            the keys of the dictionary is the user_id (participant id)
+            the values of the dictionary are lists of (features, activity_labels) pairs
+    """
+
+    user_datasets = {}
     
+    # Loop through train and test folders
+    for dataset_type in ["train", "test"]:
+
+        dataset_folder = os.path.join(accelerometer_data_folder_path, dataset_type)
+        users_file = os.path.join(dataset_folder, "subject_" + dataset_type + ".txt")
+        labels_file = os.path.join(dataset_folder, "y_" + dataset_type + ".txt")
+        feature_files = os.path.join(dataset_folder, "X_" + dataset_type + ".txt")
+
+        # Read files
+        users_data = pd.read_csv(users_file, header=None)
+        labels_data = pd.read_csv(labels_file, header=None)
+        feature_data = pd.read_csv(feature_files, header=None, sep='\s+')
+
+        print(f"({dataset_type}) users_data length: {len(users_data)}, labels_data length: {len(labels_data)}, feature_data length: {len(feature_data)}")
+        
+        # Loop through every user
+        for user_id in users_data[0].unique():
+            user_indices = users_data.index[users_data[0] == user_id].tolist()
+
+            user_sensor_values = feature_data.iloc[user_indices].to_numpy()
+            user_labels = labels_data.iloc[user_indices].to_numpy().flatten()
+
+            if user_id not in user_datasets:
+                user_datasets[user_id] = []
+            user_datasets[user_id].append((user_sensor_values, user_labels))
+            
+    return user_datasets
     
 
 
