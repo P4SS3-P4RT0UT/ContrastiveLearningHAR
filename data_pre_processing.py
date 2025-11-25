@@ -686,8 +686,8 @@ def pre_process_uci_har_dataset(user_datasets, label_map, output_shape, train_us
             x.append(v)
             y.append(l)
 
-        v_all = np.concatenate(x)
-        l_all = np.concatenate(y)
+        v_all = np.stack(x)
+        l_all = np.array(y)  
 
         user_dataset_windowed[user_id] = (v_all, l_all)
 

@@ -91,7 +91,7 @@ def process_motion_sense_accelerometer_files(accelerometer_data_folder_path):
 
 def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
     """
-    Preprocess the accelerometer files of the UCI HAR dataset into the 'user-list' format
+    Preprocess the raw accelerometer files of the UCI HAR dataset into the 'user-list' format
 
     Parameters:
 
@@ -99,6 +99,8 @@ def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
             the path to the folder containing the data files (unzipped)
             e.g. UCI_HAR_Dataset/
             the train and test folders should be directly inside it (e.g. UCI_HAR_Dataset/train/)
+            the raw data files should be inside the Inertial Signals subfolder of train and test folders (e.g. UCI_HAR_Dataset/train/Inertial Signals/)
+            there is one file per accelerometer axis (e.g. body_acc_x_train.txt)
 
     Return:
         
@@ -114,27 +116,31 @@ def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
     for dataset_type in ["train", "test"]:
 
         dataset_folder = os.path.join(accelerometer_data_folder_path, dataset_type)
-        users_file = os.path.join(dataset_folder, "subject_" + dataset_type + ".txt")
-        labels_file = os.path.join(dataset_folder, "y_" + dataset_type + ".txt")
-        feature_files = os.path.join(dataset_folder, "X_" + dataset_type + ".txt")
+        inertial_signals_folder = os.path.join(dataset_folder, "Inertial Signals")
 
-        # Read files
-        users_data = pd.read_csv(users_file, header=None)
-        labels_data = pd.read_csv(labels_file, header=None)
-        feature_data = pd.read_csv(feature_files, header=None, sep='\s+')
+        # Read raw data files
+        body_acc_x = pd.read_csv(os.path.join(inertial_signals_folder, "body_acc_x_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy()
+        body_acc_y = pd.read_csv(os.path.join(inertial_signals_folder, "body_acc_y_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy()
+        body_acc_z = pd.read_csv(os.path.join(inertial_signals_folder, "body_acc_z_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy()
 
-        print(f"({dataset_type}) users_data length: {len(users_data)}, labels_data length: {len(labels_data)}, feature_data length: {len(feature_data)}")
-        
-        # Loop through every user
-        for user_id in users_data[0].unique():
-            user_indices = users_data.index[users_data[0] == user_id].tolist()
+        # Read activity labels
+        activity_labels = pd.read_csv(os.path.join(dataset_folder, "y_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy().flatten()
 
-            user_sensor_values = feature_data.iloc[user_indices].to_numpy()
-            user_labels = labels_data.iloc[user_indices].to_numpy().flatten()
+        # Read user ids
+        user_ids = pd.read_csv(os.path.join(dataset_folder, "subject_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy().flatten()
+
+        num_samples = body_acc_x.shape[0]
+
+        # Loop through samples
+        for i in range(num_samples):
+            user_id = user_ids[i]
+            features = np.stack([body_acc_x[i], body_acc_y[i], body_acc_z[i]], axis=-1) 
+            label = activity_labels[i]
 
             if user_id not in user_datasets:
                 user_datasets[user_id] = []
-            user_datasets[user_id].append((user_sensor_values, user_labels))
+            #user_datasets[user_id].append((features, np.array([label]*features.shape[0])))
+            user_datasets[user_id].append((features, label))
             
     return user_datasets
     
