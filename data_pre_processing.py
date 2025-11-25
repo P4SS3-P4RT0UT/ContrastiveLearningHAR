@@ -170,13 +170,9 @@ def combine_windowed_dataset(user_datasets_windowed, train_users, test_users=Non
         
         v,l = user_datasets_windowed[user_id]
         if user_id in train_users:
-            if verbose > 0:
-                print(f"{user_id} Train")
             train_x.append(v)
             train_y.append(l)
         elif test_users is None or user_id in test_users:
-            if verbose > 0:
-                print(f"{user_id} Test")
             test_x.append(v)
             test_y.append(l)
 
@@ -354,6 +350,7 @@ def pre_process_dataset_composite(user_datasets, label_map, output_shape, train_
     # Step 4
     train_y_mapped = apply_label_map(train_y, label_map)
     test_y_mapped = apply_label_map(test_y, label_map)
+
 
     train_x, train_y_mapped = filter_none_label(train_x, train_y_mapped)
     test_x, test_y_mapped = filter_none_label(test_x, test_y_mapped)
@@ -628,7 +625,7 @@ def get_batched_dataset_generator(data, batch_size):
 
     # return data[:max_len].reshape((-1, batch_size, data.shape[-2], data.shape[-1]))
 
-def pre_process_uci_har_dataset(user_datasets, label_map, output_shape, train_users, test_users, validation_split_proportion=0.2, verbose=0):
+def pre_process_uci_har_dataset(user_datasets, label_map, output_shape, train_users, test_users, normalise_dataset=True, validation_split_proportion=0.2, verbose=0):
     """
     A composite function to process a dataset
     Steps
@@ -694,11 +691,14 @@ def pre_process_uci_har_dataset(user_datasets, label_map, output_shape, train_us
     train_x, train_y, test_x, test_y = combine_windowed_dataset(user_dataset_windowed, train_users, test_users, verbose=1)
 
     # Step 1
+    if normalise_dataset:
+        means, stds = get_mean_std_from_user_list_format(user_datasets, train_users)
+        train_x = normalise(train_x, means, stds)
+        test_x = normalise(test_x, means, stds)
+
+    # Step 2
     train_y_mapped = apply_label_map(train_y, label_map)
     test_y_mapped = apply_label_map(test_y, label_map)
-
-    print("Train size:", len(train_y_mapped))
-    print("Test size:", len(test_y_mapped))
 
     train_x, train_y_mapped = filter_none_label(train_x, train_y_mapped)
     test_x, test_y_mapped = filter_none_label(test_x, test_y_mapped)
@@ -714,7 +714,7 @@ def pre_process_uci_har_dataset(user_datasets, label_map, output_shape, train_us
         print(np.unique(train_y_mapped, return_counts=True))
         print("-----------------")
 
-    # Step 5
+    # Step 3
     train_y_one_hot = tf.keras.utils.to_categorical(train_y_mapped, num_classes=output_shape)
     test_y_one_hot = tf.keras.utils.to_categorical(test_y_mapped, num_classes=output_shape)
 
@@ -723,7 +723,7 @@ def pre_process_uci_har_dataset(user_datasets, label_map, output_shape, train_us
     r = np.random.randint(len(test_y_mapped))
     assert test_y_one_hot[r].argmax() == test_y_mapped[r]
 
-    # Step 6
+    # Step 4
     if validation_split_proportion is not None and validation_split_proportion > 0:
         train_x_split, val_x_split, train_y_split, val_y_split = sklearn.model_selection.train_test_split(train_x, train_y_one_hot, test_size=validation_split_proportion, random_state=42)
     else:

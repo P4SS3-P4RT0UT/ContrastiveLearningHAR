@@ -185,7 +185,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.show()
+plt.savefig('epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -219,9 +219,9 @@ training_history = linear_evaluation_model.fit(
 
 linear_eval_best_model = tf.keras.models.load_model(linear_eval_best_model_file_name)
 
-print("Model with lowest validation Loss:")
-print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True))
-print("Model in last epoch")
+print("Model with lowest validation Loss:", flush=True)
+print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
+print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True))
 
 
@@ -254,11 +254,10 @@ training_history = full_evaluation_model.fit(
 
 full_eval_best_model = tf.keras.models.load_model(full_eval_best_model_file_name)
 
-print("Model with lowest validation Loss:")
-print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True))
-print("Model in last epoch")
-print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True))
-
+print("Model with lowest validation Loss:", flush=True)
+print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
+print("Model in last epoch", flush=True)
+print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
 # %% [markdown]
 # ## Extra: t-SNE Plots
