@@ -140,8 +140,9 @@ decay_steps = 1000
 epochs = 200
 temperature = 0.1
 transform_funcs = [
+    transformations.resampling_fast_random,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    transformations.rotation_transform_vectorized # Use rotation trasnformation
+    # transformations.rotation_transform_vectorized # Use rotation trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
