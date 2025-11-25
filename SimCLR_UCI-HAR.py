@@ -167,7 +167,7 @@ start_time = datetime.datetime.now()
 start_time_str = start_time.strftime("%Y%m%d-%H%M%S")
 tf.keras.backend.set_floatx('float32')
 
-lr_decayed_fn = tf.keras.experimental.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
+lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
@@ -202,7 +202,7 @@ tag = "linear_eval"
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
 linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=7)
 
-linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.hdf5"
+linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
     monitor='val_loss', mode='min', save_best_only=True, save_weights_only=False, verbose=0
 )
@@ -237,7 +237,7 @@ tag = "full_eval"
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
 full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="TPN", intermediate_layer=7, last_freeze_layer=4)
 
-full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.hdf5"
+full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
     monitor='val_loss', mode='min', save_best_only=True, save_weights_only=False, verbose=0
 )
