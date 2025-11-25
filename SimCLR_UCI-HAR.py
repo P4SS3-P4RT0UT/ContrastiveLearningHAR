@@ -75,27 +75,14 @@ with zipfile.ZipFile(working_directory + 'UCI_HAR_Dataset.zip', 'r') as zip_ref:
 # Here we split it into training, validation and testing sets. 
 
 # %%
-from importlib import reload
-reload(raw_data_processing)
-
-# %%
-accelerometer_data_folder_path = working_directory + 'UCI_HAR_Dataset/'
+accelerometer_data_folder_path = working_directory + 'UCI HAR Dataset/'
 user_datasets = raw_data_processing.process_uci_har_accelerometer_files(accelerometer_data_folder_path)
-print(f"Number of users' datasets: {len(user_datasets)}")
-print(user_datasets[1])
 
 # %%
 with open(working_directory + 'uci_har_user_split.pkl', 'wb') as f:
     pickle.dump({
         'user_split': user_datasets,
     }, f)
-
-# %%
-# Verify by loading the pickle file
-with open(working_directory + 'uci_har_user_split.pkl', 'rb') as f:
-        data = pickle.load(f)
-        print("Contents of the pickle file:")
-        print(data)
 
 # %%
 input_shape = (128, 3)  # UCI-HAR data shape: 128 time steps, 3 axes (x, y, z)  
@@ -108,7 +95,6 @@ label_list_full_name = ['walking', 'walking upstairs', 'walking downstairs', 'si
 has_null_class = False
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
-print(f"Label map: {label_map}")
 
 output_shape = len(label_list)
 
@@ -131,11 +117,6 @@ with open(dataset_save_path + dataset_name_user_split, 'rb') as f:
 # %%
 har_users = list(user_datasets.keys())
 train_users, test_users = get_fixed_split_users(har_users)
-print(f'Testing: {test_users}, Training: {train_users}')
-
-# %%
-from importlib import reload
-reload(data_pre_processing)
 
 # %%
 np_train, np_val, np_test = data_pre_processing.pre_process_uci_har_dataset(
@@ -196,10 +177,8 @@ simclr_model.summary()
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
-simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.hdf5"
+simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
-
-
 
 # %%
 plt.figure(figsize=(12,8))
@@ -305,7 +284,6 @@ tsne_model = sklearn.manifold.TSNE(perplexity=perplexity, verbose=1, random_stat
 tsne_projections = tsne_model.fit_transform(embeddings)
 
 
-
 # %% [markdown]
 # ### Plotting
 
@@ -331,12 +309,11 @@ legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
-# %% [markdown]
-# ### Custom Color maps (Optional)
-# 
-# This section can be run to produce plots where semantically similar classes share similar colors. This requires the definition of a custom mapping of classes to colors.
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
 
-# %%
+
+
 # This is used to select colors for labels which are close to each other
 # Each pair corresponds to one label class
 # i.e. ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
@@ -352,7 +329,6 @@ color_map_base = dict (
 )
 color_palette = np.array([color_map_base[color_index] for color_index in label_color_spectrum])
 
-# %%
 # This selects the appropriate number of colors to be used in the plot
 labels_argmax = np.argmax(np_test[1], axis=1)
 unique_labels = np.unique(labels_argmax)
@@ -374,6 +350,8 @@ plt.legend(loc='lower left', bbox_to_anchor=(0.25, -0.3), ncol=2)
 legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 
 # %%
