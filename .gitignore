@@ -3,3 +3,4 @@ __pycache__/
 test_run/
 uci_har_run/*
 !uci_har_run/UCI_HAR_Dataset.zip
+results/
