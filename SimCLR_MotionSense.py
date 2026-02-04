@@ -209,9 +209,9 @@ decay_steps = 1000
 epochs = 200
 temperature = 0.1
 transform_funcs = [
-    transformations.resampling_fast_random,
+    #transformations.resampling_fast_random,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    #transformations.rotation_transform_vectorized # Use rotation trasnformation
+    transformations.rotation_transform_vectorized # Use rotation trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
@@ -240,7 +240,7 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_base_model(input_shape, model_name="base_model")
+base_model = simclr_models.create_syncnet_model(input_shape, model_name="base_model")
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
@@ -268,7 +268,7 @@ batch_size = 200
 tag = "linear_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=7)
+linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=27)
 
 linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
@@ -303,7 +303,7 @@ batch_size = 200
 tag = "full_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="TPN", intermediate_layer=7, last_freeze_layer=4)
+full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="SyncNet", intermediate_layer=27, last_freeze_layer=17)
 
 full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
@@ -343,7 +343,7 @@ perplexity = 30.0
 # ### t-SNE Representations
 
 # %%
-intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=7)
+intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=27)
 intermediate_model.summary()
 
 embeddings = intermediate_model.predict(np_test[0], batch_size=600)
