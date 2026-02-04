@@ -73,6 +73,71 @@ def create_base_model(input_shape, model_name="base_model"):
 
     return tf.keras.Model(inputs, x, name=model_name)
 
+def create_syncnet_model(input_shape, model_name="syncnet_model"):
+    """
+    Create the syncnet model for activity recognition
+    Reference (SyncNet model):
+        J. S. Chung and A. Zisserman, “Out of Time: Automated Lip Sync in the Wild,” Mar. 2017, pp. 251–263. doi: 10.1007/978-3-319-54427-4_19.
+
+    Architecture:
+        Input
+        -> ...
+        -> Global Maximum Pooling 1D
+    
+    Parameters:
+        input_shape
+            the input shape for the model, should be (window_size, num_channels)
+    
+    Returns:
+        model (tf.keras.Model)
+    """
+    inputs = tf.keras.Input(shape=input_shape, name='input')
+    x = inputs
+    
+    # SYNCNET BLOCK 1
+    x = tf.keras.layers.Conv1D(64, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(1e-4), strides=1, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.ReLU()(x)
+    x = tf.keras.layers.Dropout(0.1)(x) # from TPN architecture
+    # x = tf.keras.layers.MaxPooling1D(pool_size=1, strides=1)(x) NO-OP (apparently)
+
+    # SYNCNET BLOCK 2
+    x = tf.keras.layers.Conv1D(192, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(1e-4), strides=1, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.ReLU()(x)
+    x = tf.keras.layers.Dropout(0.1)(x) # from TPN architecture
+    x = tf.keras.layers.MaxPooling1D(pool_size=3, strides=2)(x)
+
+    # SYNCNET BLOCK 3
+    x = tf.keras.layers.Conv1D(384, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(1e-4), padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.ReLU()(x)
+    x = tf.keras.layers.Dropout(0.1)(x) # from TPN architecture
+
+    # SYNCNET BLOCK 4
+    x = tf.keras.layers.Conv1D(256, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(1e-4), padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.ReLU()(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+
+    # SYNCNET BLOCK 5
+    x = tf.keras.layers.Conv1D(256, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(1e-4), padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.ReLU()(x)
+    x = tf.keras.layers.Dropout(0.1)(x) # from TPN architecture
+    x = tf.keras.layers.MaxPooling1D(pool_size=3, strides=2)(x)
+
+    # SYNCNET BLOCK 6
+    x = tf.keras.layers.Conv1D(512, kernel_size=5, kernel_regularizer=tf.keras.regularizers.l2(1e-4), padding='valid')(x) # kernel size could also be 4
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.ReLU()(x)    
+    x = tf.keras.layers.Dropout(0.1)(x) # from TPN architecture (OPTIONAL)
+    
+    # FINAL POOLING LAYER
+    x = tf.keras.layers.GlobalMaxPool1D(data_format='channels_last', name='global_max_pooling1d')(x)
+
+    return tf.keras.Model(inputs, x, name=model_name)
+
 def attach_simclr_head(base_model, hidden_1=256, hidden_2=128, hidden_3=50):
     """
     Attach a 3-layer fully-connected encoding head
