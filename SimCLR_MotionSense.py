@@ -356,7 +356,7 @@ perplexity = 30.0
 # ### t-SNE Representations
 
 # %%
-intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=7)
+intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=28)
 intermediate_model.summary()
 
 embeddings = intermediate_model.predict(np_test[0], batch_size=600)
