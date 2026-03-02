@@ -39,7 +39,7 @@ import data_pre_processing
 import simclr_models
 import simclr_utitlities
 import transformations
-
+import dnn_models_tf
 # %%
 working_directory = 'test_run/'
 dataset_save_path = working_directory

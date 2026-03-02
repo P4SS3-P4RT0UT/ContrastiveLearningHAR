@@ -28,7 +28,7 @@ def act_fun(act_type):
 # ---------------------------------------------------------------------------
 # Layer Normalisation (custom – mirrors the original per-sample LayerNorm)
 # ---------------------------------------------------------------------------
-
+@tf.keras.utils.register_keras_serializable(package="dnn_models_tf")
 class LayerNorm(layers.Layer):
     """Layer normalisation over the last dimension, with learnable gamma/beta."""
 
@@ -60,7 +60,7 @@ class LayerNorm(layers.Layer):
 # ---------------------------------------------------------------------------
 # SincConv  (fast, vectorised version)
 # ---------------------------------------------------------------------------
-
+@tf.keras.utils.register_keras_serializable(package="dnn_models_tf")
 class SincConv_fast(layers.Layer):
     """
     Sinc-based bandpass filter-bank convolution layer.
