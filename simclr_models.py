@@ -74,6 +74,44 @@ def create_base_model(input_shape, model_name="base_model"):
 
     return tf.keras.Model(inputs, x, name=model_name)
 
+# ---------------------------------------------------------------------------
+# Serialisable replacements for Lambda layers
+# ---------------------------------------------------------------------------
+
+@tf.keras.utils.register_keras_serializable(package="sincnet_model")
+class ChannelSlice(tf.keras.layers.Layer):
+    """
+    Extracts a single channel from a (batch, steps, channels) tensor,
+    returning (batch, steps, 1). Replaces a Lambda to allow safe serialisation.
+    """
+
+    def __init__(self, channel_index, **kwargs):
+        super().__init__(**kwargs)
+        self.channel_index = channel_index
+
+    def call(self, x):
+        c = self.channel_index
+        return x[:, :, c:c + 1]
+
+    def get_config(self):
+        cfg = super().get_config()
+        cfg.update({"channel_index": self.channel_index})
+        return cfg
+
+
+@tf.keras.utils.register_keras_serializable(package="sincnet_model")
+class AbsoluteValue(tf.keras.layers.Layer):
+    """
+    Element-wise absolute value. Replaces Lambda(tf.abs) to allow safe
+    serialisation. Used after SincConv to obtain energy envelopes.
+    """
+
+    def call(self, x):
+        return tf.abs(x)
+
+    def get_config(self):
+        return super().get_config()
+    
 def create_sincnet_model(input_shape, sincnet_options, model_name="sincnet_model"):
     """
     Create a SincNet-based feature extraction model using the Keras functional API.
@@ -204,21 +242,20 @@ def create_sincnet_model(input_shape, sincnet_options, model_name="sincnet_model
     channel_outputs = []
     for ch in range(num_channels):
         # Slice out one axis: (batch, window_size) -> (batch, window_size, 1)
-        ch_slice = tf.keras.layers.Lambda(
-            lambda t, c=ch: t[:, :, c:c+1],
-            name=f"split_ch{ch}"
-        )(x)
+        ch_slice = ChannelSlice(ch, name=f"split_ch{ch}")(x)
 
         # Independent SincConv filter bank for this axis
         ch_sinc = SincConv_fast(
             N_filt_0, len_filt_0, fs,
             padding="valid",
+            min_low_hz=1,
+            min_band_hz=2,
             name=f"sincconv_ch{ch}"
         )(ch_slice)
 
         # |·| rectification — converts signed filter responses to energy envelopes,
         # matching torch.abs() in the original SincNet forward pass
-        ch_sinc = tf.keras.layers.Lambda(tf.abs, name=f"abs_ch{ch}")(ch_sinc)
+        ch_sinc = AbsoluteValue(name=f"abs_ch{ch}")(ch_sinc)
 
         channel_outputs.append(ch_sinc)
 
