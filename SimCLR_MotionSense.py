@@ -245,7 +245,7 @@ sincnet_options = {
     "cnn_len_filt":          [31, 5, 5], # Originally 251, should be odd 
     "cnn_max_pool_len":      [3, 3, 3],
     "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
-    "cnn_drop":              [0.0, 0.0, 0.0],
+    "cnn_drop":              [0.0, 0.1, 0.1],
     "cnn_use_laynorm":       [True, True, True],
     "cnn_use_batchnorm":     [False, False, False],
     "cnn_use_laynorm_inp":   True,
