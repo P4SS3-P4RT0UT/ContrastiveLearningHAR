@@ -248,8 +248,8 @@ def create_sincnet_model(input_shape, sincnet_options, model_name="sincnet_model
         ch_sinc = SincConv_fast(
             N_filt_0, len_filt_0, fs,
             padding="valid",
-            min_low_hz=0.5,
-            min_band_hz=1,
+            min_low_hz=1,
+            min_band_hz=2,
             name=f"sincconv_ch{ch}"
         )(ch_slice)
 

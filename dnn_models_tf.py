@@ -93,11 +93,10 @@ class SincConv_fast(layers.Layer):
         self.min_low_hz   = min_low_hz
         self.min_band_hz  = min_band_hz
 
-        # Mel-spaced initialisation
-        low_hz  = 30.0
+        # Linear initialisation
+        low_hz  = 1.0
         high_hz = sample_rate / 2.0 - (min_low_hz + min_band_hz)
-        mel = np.linspace(self.to_mel(low_hz), self.to_mel(high_hz), out_channels + 1)
-        hz  = self.to_hz(mel)
+        hz = np.linspace(low_hz, high_hz, out_channels + 1)
 
         self._init_low_hz  = hz[:-1].reshape(-1, 1).astype(np.float32)
         self._init_band_hz = np.diff(hz).reshape(-1, 1).astype(np.float32)
