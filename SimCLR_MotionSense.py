@@ -320,7 +320,7 @@ batch_size = 200
 tag = "full_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=22, last_freeze_layer=11)
+full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=22, last_freeze_layer=3)
 
 full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
