@@ -368,6 +368,19 @@ tsne_projections = tsne_model.fit_transform(embeddings)
 # %% [markdown]
 # ### Plotting
 
+# Depthwise version (3 independent SincConv layers)
+dnn_models_tf.plot_sincnet_filter_response(
+    model=base_model,
+    fs=sampling_rate,
+    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
+)
+
+# Cross-axis version (single SincConv after channel_mix)
+dnn_models_tf.plot_sincnet_filter_response(
+    model=base_model,
+    fs=sampling_rate,
+    sincconv_layer_names=["sincconv"]
+)
 
 # %% [markdown]
 # ### Custom Color maps (Optional)

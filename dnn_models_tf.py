@@ -3,6 +3,7 @@ import math
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+import matplotlib.pyplot as plt
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +378,60 @@ class SincNet(keras.Model):
 
         batch = tf.shape(x)[0]
         return tf.reshape(x, (batch, -1))
+
+
+def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000):
+    """
+    Plot the cumulative frequency response of learned SincNet filters,
+    reproducing Fig. 3 from Ravanelli & Bengio (2018).
+
+    Parameters
+    ----------
+    model       : tf.keras.Model  — your trained SincNet base model
+    fs          : int             — IMU sample rate (e.g. 50)
+    sincconv_layer_names : list[str] — names of SincConv layers to plot
+                           e.g. ["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
+                           or   ["sincconv"] for the cross-axis version
+    n_freqs     : int             — frequency resolution of the plot
+    """
+
+    freqs = np.linspace(0, fs / 2, n_freqs)  # 0 to Nyquist
+
+    plt.figure(figsize=(10, 5))
+    colors = ['red', 'blue', 'green']
+    labels = ['X axis', 'Y axis', 'Z axis']
+
+    for idx, layer_name in enumerate(sincconv_layer_names):
+        layer = model.get_layer(layer_name)
+
+        # Extract learned low cutoff and bandwidth parameters
+        low_hz  = layer.min_low_hz  + np.abs(layer.low_hz_.numpy())   # (N_filt, 1)
+        band_hz = layer.min_band_hz + np.abs(layer.band_hz_.numpy())   # (N_filt, 1)
+        high_hz = np.clip(low_hz + band_hz, layer.min_low_hz,
+                          getattr(layer, 'max_high_hz', fs / 2))       # (N_filt, 1)
+
+        # Compute ideal bandpass response for each filter at each frequency:
+        # response[i, f] = 1 if freqs[f] is within filter i's passband, else 0
+        freqs_row  = freqs.reshape(1, -1)          # (1, n_freqs)
+        in_band    = (freqs_row >= low_hz) & (freqs_row <= high_hz)    # (N_filt, n_freqs)
+
+        # Cumulative sum across filters, normalised to [0, 1]
+        cumulative = in_band.sum(axis=0).astype(float)
+        cumulative /= cumulative.max()
+
+        plt.plot(freqs, cumulative,
+                 color=colors[idx % len(colors)],
+                 linestyle='-' if idx == 0 else '--',
+                 linewidth=2,
+                 label=layer_name if len(sincconv_layer_names) > 1 else 'SincNet')
+
+    plt.xlabel('Frequency [Hz]', fontsize=13)
+    plt.ylabel('Normalized Filter Sum', fontsize=13)
+    plt.title('Cumulative frequency response of the SincNet filters', fontsize=14)
+    plt.legend(fontsize=11)
+    plt.xlim([0, fs / 2])
+    plt.ylim([0, 1.05])
+    plt.tight_layout()
+    plt.savefig('sincnet_filter_response.png', dpi=150, bbox_inches='tight')
+
+    
