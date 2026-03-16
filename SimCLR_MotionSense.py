@@ -37,6 +37,7 @@ sns.set_context('poster')
 import raw_data_processing
 import data_pre_processing
 import simclr_models
+import sincnet_model
 import simclr_utitlities
 import transformations
 import dnn_models_tf
@@ -241,7 +242,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
 sincnet_options = {
-    "cnn_N_filt":            [31, 60, 60], # Originally 80
+    "cnn_N_filt":            [80, 60, 60], # Originally 80
     "cnn_len_filt":          [31, 5, 5], # Originally 251, should be odd 
     "cnn_max_pool_len":      [3, 3, 3],
     "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
@@ -251,9 +252,12 @@ sincnet_options = {
     "cnn_use_laynorm_inp":   True,
     "cnn_use_batchnorm_inp": False,
     "fs":                    sampling_rate,   # MotionSense dataset sampling rate
+    "sinc_min_low_hz":   0.1,
+    "sinc_min_band_hz":  1.0,    
+    "sinc_max_high_hz":  None,   # put None for Nyquist
     }
 
-base_model = simclr_models.create_sincnet_model(input_shape, model_name="sincnet_model", sincnet_options=sincnet_options)
+base_model = sincnet_model.create_sincnet_model(input_shape, model_name="sincnet_model", sincnet_options=sincnet_options)
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
@@ -351,7 +355,6 @@ print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_t
 target_model = simclr_model 
 perplexity = 30.0
 
-
 # %% [markdown]
 # ### t-SNE Representations
 
@@ -443,15 +446,16 @@ plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches=
 
 
 # Depthwise version (3 independent SincConv layers)
-dnn_models_tf.plot_sincnet_filter_response(
-    model=base_model,
-    fs=sampling_rate,
-    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
-)
-
-# Cross-axis version (single SincConv after channel_mix)
 #dnn_models_tf.plot_sincnet_filter_response(
 #    model=base_model,
 #    fs=sampling_rate,
-#    sincconv_layer_names=["sincconv"]
+#    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
 #)
+
+# Cross-axis version (single SincConv after channel_mix)
+dnn_models_tf.plot_sincnet_filter_response(
+    model=base_model,
+    fs=sampling_rate,
+    sincconv_layer_names=["sincconv"],
+    smooth_sigma=10,
+)

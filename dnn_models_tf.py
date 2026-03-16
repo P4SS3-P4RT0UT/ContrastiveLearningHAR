@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter1d
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +67,31 @@ class SincConv_fast(layers.Layer):
     """
     Sinc-based bandpass filter-bank convolution layer.
 
+    Parameters
+    ----------
+    out_channels : int
+        Number of filters.
+    kernel_size : int
+        Filter length (forced odd internally).
+    sample_rate : int
+        Signal sample rate in Hz.
+    stride : int
+        Convolution stride.
+    padding : str
+        'valid' or 'same'.
+    min_low_hz : float
+        Hard floor on each filter's lower cutoff frequency (Hz).
+        Prevents filters from drifting toward DC / sensor bias.
+    min_band_hz : float
+        Hard floor on each filter's bandwidth (Hz).
+        Prevents filters collapsing to zero-bandwidth spikes.
+    max_high_hz : float or None
+        Hard ceiling on each filter's upper cutoff frequency (Hz).
+        Defaults to Nyquist (sample_rate / 2). Set to a value below
+        Nyquist to restrict the filter bank to a frequency sub-range,
+        e.g. max_high_hz=10 for IMU signals where activity information
+        lives mostly below 10 Hz.
+
     Reference
     ---------
     Mirco Ravanelli, Yoshua Bengio,
@@ -75,7 +101,8 @@ class SincConv_fast(layers.Layer):
 
     def __init__(self, out_channels, kernel_size, sample_rate=16000,
                  stride=1, padding="valid",
-                 min_low_hz=0.1, min_band_hz=5, **kwargs):
+                 min_low_hz=0.5, min_band_hz=1.0, max_high_hz=None,
+                 **kwargs):
         super().__init__(**kwargs)
 
         self.out_channels = out_channels
@@ -85,10 +112,20 @@ class SincConv_fast(layers.Layer):
         self.padding      = padding.upper()
         self.min_low_hz   = min_low_hz
         self.min_band_hz  = min_band_hz
+        self.max_high_hz  = max_high_hz if max_high_hz is not None else sample_rate / 2.0
 
-        # Linear initialisation
-        low_hz  = 0.5
-        high_hz = sample_rate / 2.0 - (min_low_hz + min_band_hz)
+        # Linear initialisation — uniform spacing from min_low_hz to max_high_hz.
+        # Linear is preferred over the original Mel spacing for IMU signals because
+        # all relevant movement frequencies sit in a narrow low-frequency range
+        # where Mel compression provides no benefit.
+        low_hz  = min_low_hz
+        high_hz = self.max_high_hz - (min_low_hz + min_band_hz)
+        if high_hz <= low_hz:
+            raise ValueError(
+                f"Frequency range is too narrow: max_high_hz={self.max_high_hz} leaves "
+                f"no room for {out_channels} filters with min_low_hz={min_low_hz} and "
+                f"min_band_hz={min_band_hz}. Increase max_high_hz or reduce the floors."
+            )
         hz = np.linspace(low_hz, high_hz, out_channels + 1)
 
         self._init_low_hz  = hz[:-1].reshape(-1, 1).astype(np.float32)
@@ -115,8 +152,8 @@ class SincConv_fast(layers.Layer):
             name="band_hz", shape=(self.out_channels, 1),
             initializer=tf.constant_initializer(self._init_band_hz),
             trainable=True)
-        self.window_ = tf.constant(self._window_np, dtype=tf.float32)  # (kernel//2,)
-        self.n_      = tf.constant(self._n_np,      dtype=tf.float32)  # (1, kernel//2)
+        self.window_ = tf.constant(self._window_np, dtype=tf.float32)
+        self.n_      = tf.constant(self._n_np,      dtype=tf.float32)
         super().build(input_shape)
 
     def call(self, waveforms):
@@ -129,32 +166,31 @@ class SincConv_fast(layers.Layer):
         -------
         Tensor  (batch, n_samples_out, out_channels)
         """
-        low  = self.min_low_hz  + tf.abs(self.low_hz_)                              # (C,1)
+        low  = self.min_low_hz + tf.abs(self.low_hz_)                   # (C, 1)
         high = tf.clip_by_value(
             low + self.min_band_hz + tf.abs(self.band_hz_),
-            self.min_low_hz, self.sample_rate / 2.0)
-        band = tf.squeeze(high - low, axis=1)                                        # (C,)
+            self.min_low_hz, self.max_high_hz)                           # (C, 1)
+        band = tf.squeeze(high - low, axis=1)                            # (C,)
 
-        f_times_t_low  = tf.matmul(low,  self.n_)   # (C, kernel//2)
-        f_times_t_high = tf.matmul(high, self.n_)   # (C, kernel//2)
+        f_times_t_low  = tf.matmul(low,  self.n_)                       # (C, kernel//2)
+        f_times_t_high = tf.matmul(high, self.n_)                       # (C, kernel//2)
 
-        # Equation 4 of the paper, expanded
         band_pass_left = (
             (tf.sin(f_times_t_high) - tf.sin(f_times_t_low)) /
             (self.n_ / 2.0)
-        ) * self.window_                                                              # (C, kernel//2)
+        ) * self.window_                                                  # (C, kernel//2)
 
-        band_pass_center = 2.0 * tf.reshape(band, (-1, 1))                          # (C, 1)
-        band_pass_right  = tf.reverse(band_pass_left, axis=[1])                     # (C, kernel//2)
+        band_pass_center = 2.0 * tf.reshape(band, (-1, 1))               # (C, 1)
+        band_pass_right  = tf.reverse(band_pass_left, axis=[1])          # (C, kernel//2)
 
         band_pass = tf.concat(
-            [band_pass_left, band_pass_center, band_pass_right], axis=1)            # (C, kernel)
-        band_pass = band_pass / (2.0 * band[:, None])                               # normalise
+            [band_pass_left, band_pass_center, band_pass_right], axis=1) # (C, kernel)
+        band_pass = band_pass / (2.0 * band[:, None])
 
-        # Reshape to (kernel_size, 1, out_channels) for tf.nn.conv1d
+        # (kernel_size, 1, out_channels) for tf.nn.conv1d
         filters = tf.transpose(
             tf.reshape(band_pass, (self.out_channels, self.kernel_size, 1)),
-            perm=[1, 2, 0])                                                          # (kernel,1,C)
+            perm=[1, 2, 0])
 
         return tf.nn.conv1d(waveforms, filters,
                             stride=self.stride, padding=self.padding)
@@ -169,6 +205,7 @@ class SincConv_fast(layers.Layer):
             "padding":      self.padding,
             "min_low_hz":   self.min_low_hz,
             "min_band_hz":  self.min_band_hz,
+            "max_high_hz":  self.max_high_hz,
         })
         return cfg
 
@@ -190,27 +227,26 @@ class MLP(keras.Model):
     def __init__(self, options, **kwargs):
         super().__init__(**kwargs)
 
-        self.input_dim           = int(options["input_dim"])
-        self.fc_lay              = options["fc_lay"]
-        self.fc_drop             = options["fc_drop"]
-        self.fc_use_batchnorm    = options["fc_use_batchnorm"]
-        self.fc_use_laynorm      = options["fc_use_laynorm"]
-        self.fc_use_laynorm_inp  = options["fc_use_laynorm_inp"]
-        self.fc_use_batchnorm_inp= options["fc_use_batchnorm_inp"]
-        self.fc_act              = options["fc_act"]
+        self.input_dim            = int(options["input_dim"])
+        self.fc_lay               = options["fc_lay"]
+        self.fc_drop              = options["fc_drop"]
+        self.fc_use_batchnorm     = options["fc_use_batchnorm"]
+        self.fc_use_laynorm       = options["fc_use_laynorm"]
+        self.fc_use_laynorm_inp   = options["fc_use_laynorm_inp"]
+        self.fc_use_batchnorm_inp = options["fc_use_batchnorm_inp"]
+        self.fc_act               = options["fc_act"]
 
         self.N_fc_lay = len(self.fc_lay)
 
-        # Optional input normalisation
         self.ln0 = LayerNorm(self.input_dim) if self.fc_use_laynorm_inp  else None
         self.bn0 = layers.BatchNormalization(momentum=0.95) \
                    if self.fc_use_batchnorm_inp else None
 
-        self.wx_layers  = []
-        self.bn_layers  = []
-        self.ln_layers  = []
-        self.act_layers = []
-        self.drop_layers= []
+        self.wx_layers   = []
+        self.bn_layers   = []
+        self.ln_layers   = []
+        self.act_layers  = []
+        self.drop_layers = []
 
         current_input = self.input_dim
         for i in range(self.N_fc_lay):
@@ -266,7 +302,7 @@ class MLP(keras.Model):
 
 
 # ---------------------------------------------------------------------------
-# SincNet
+# SincNet (subclassed model — kept for backward compatibility)
 # ---------------------------------------------------------------------------
 
 class SincNet(keras.Model):
@@ -296,7 +332,6 @@ class SincNet(keras.Model):
         self.fs                    = options["fs"]
         self.N_cnn_lay             = len(self.cnn_N_filt)
 
-        # Optional input normalisation
         self.ln0 = LayerNorm(self.input_dim) if self.cnn_use_laynorm_inp  else None
         self.bn0 = layers.BatchNormalization(momentum=0.95) \
                    if self.cnn_use_batchnorm_inp else None
@@ -318,7 +353,7 @@ class SincNet(keras.Model):
             self.act_layers.append(act_fun(self.cnn_act[i]))
 
             out_len = int((current_input - len_filt + 1) / pool_len)
-            self.ln_layers.append(LayerNorm(N_filt * out_len))  # flattened dim for LN
+            self.ln_layers.append(LayerNorm(N_filt * out_len))
             self.bn_layers.append(layers.BatchNormalization(momentum=0.95))
 
             if i == 0:
@@ -333,31 +368,19 @@ class SincNet(keras.Model):
         self.out_dim = current_input * int(self.cnn_N_filt[-1])
 
     def call(self, x, training=False):
-        """
-        Parameters
-        ----------
-        x : Tensor  (batch, seq_len)
-
-        Returns
-        -------
-        Tensor  (batch, out_dim)
-        """
         if self.ln0 is not None:
             x = self.ln0(x)
         if self.bn0 is not None:
             x = self.bn0(x, training=training)
 
-        # (batch, seq_len) → (batch, seq_len, 1)
         x = tf.expand_dims(x, axis=-1)
 
         for i in range(self.N_cnn_lay):
             x = self.conv_layers[i](x)
 
-            # Absolute value on first SincConv layer (mirrors torch.abs in original)
             if i == 0:
                 x = tf.abs(x)
 
-            # Max-pooling  (TF: input shape (batch, steps, channels))
             pool = self.cnn_max_pool_len[i]
             x = tf.nn.max_pool1d(x, ksize=pool, strides=pool, padding="VALID")
 
@@ -367,12 +390,9 @@ class SincNet(keras.Model):
                 x_flat = self.ln_layers[i](x_flat)
                 x = tf.reshape(x_flat, tf.shape(x))
                 x = self.drop_layers[i](self.act_layers[i](x), training=training)
-
             elif self.cnn_use_batchnorm[i]:
-                # BN over channels axis (last dim in TF)
                 x = self.bn_layers[i](x, training=training)
                 x = self.drop_layers[i](self.act_layers[i](x), training=training)
-
             else:
                 x = self.drop_layers[i](self.act_layers[i](x), training=training)
 
@@ -380,44 +400,46 @@ class SincNet(keras.Model):
         return tf.reshape(x, (batch, -1))
 
 
-def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000):
+# ---------------------------------------------------------------------------
+# Filter response visualisation
+# ---------------------------------------------------------------------------
+
+def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
+                                 smooth_sigma=10):
     """
     Plot the cumulative frequency response of learned SincNet filters,
     reproducing Fig. 3 from Ravanelli & Bengio (2018).
 
     Parameters
     ----------
-    model       : tf.keras.Model  — your trained SincNet base model
-    fs          : int             — IMU sample rate (e.g. 50)
-    sincconv_layer_names : list[str] — names of SincConv layers to plot
-                           e.g. ["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
-                           or   ["sincconv"] for the cross-axis version
-    n_freqs     : int             — frequency resolution of the plot
+    model                : tf.keras.Model
+    fs                   : int    — sample rate in Hz
+    sincconv_layer_names : list[str] — layer names to plot,
+                           e.g. ["sincconv"] or ["sincconv_ch0", ..., "sincconv_ch2"]
+    n_freqs              : int    — frequency axis resolution
+    smooth_sigma         : float  — Gaussian smoothing sigma (set to 0 to disable)
     """
-
-    freqs = np.linspace(0, fs / 2, n_freqs)  # 0 to Nyquist
+    freqs  = np.linspace(0, fs / 2, n_freqs)
+    colors = ['red', 'blue', 'green', 'orange', 'purple']
 
     plt.figure(figsize=(10, 5))
-    colors = ['red', 'blue', 'green']
-    labels = ['X axis', 'Y axis', 'Z axis']
 
     for idx, layer_name in enumerate(sincconv_layer_names):
         layer = model.get_layer(layer_name)
 
-        # Extract learned low cutoff and bandwidth parameters
-        low_hz  = layer.min_low_hz  + np.abs(layer.low_hz_.numpy())   # (N_filt, 1)
-        band_hz = layer.min_band_hz + np.abs(layer.band_hz_.numpy())   # (N_filt, 1)
+        low_hz  = layer.min_low_hz  + np.abs(layer.low_hz_.numpy())     # (N_filt, 1)
+        band_hz = layer.min_band_hz + np.abs(layer.band_hz_.numpy())     # (N_filt, 1)
         high_hz = np.clip(low_hz + band_hz, layer.min_low_hz,
-                          getattr(layer, 'max_high_hz', fs / 2))       # (N_filt, 1)
+                          layer.max_high_hz)                             # (N_filt, 1)
 
-        # Compute ideal bandpass response for each filter at each frequency:
-        # response[i, f] = 1 if freqs[f] is within filter i's passband, else 0
-        freqs_row  = freqs.reshape(1, -1)          # (1, n_freqs)
-        in_band    = (freqs_row >= low_hz) & (freqs_row <= high_hz)    # (N_filt, n_freqs)
+        freqs_row = freqs.reshape(1, -1)
+        in_band   = (freqs_row >= low_hz) & (freqs_row <= high_hz)
 
-        # Cumulative sum across filters, normalised to [0, 1]
         cumulative = in_band.sum(axis=0).astype(float)
         cumulative /= cumulative.max()
+
+        if smooth_sigma > 0:
+            cumulative = gaussian_filter1d(cumulative, sigma=smooth_sigma)
 
         plt.plot(freqs, cumulative,
                  color=colors[idx % len(colors)],
@@ -433,5 +455,6 @@ def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000):
     plt.ylim([0, 1.05])
     plt.tight_layout()
     plt.savefig('sincnet_filter_response.png', dpi=150, bbox_inches='tight')
+    plt.show()
 
     
