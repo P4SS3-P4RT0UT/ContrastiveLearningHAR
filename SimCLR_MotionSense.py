@@ -241,7 +241,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
 sincnet_options = {
-    "cnn_N_filt":            [80, 60, 60], # Unchanged
+    "cnn_N_filt":            [31, 60, 60], # Originally 80
     "cnn_len_filt":          [31, 5, 5], # Originally 251, should be odd 
     "cnn_max_pool_len":      [3, 3, 3],
     "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
@@ -368,20 +368,6 @@ tsne_projections = tsne_model.fit_transform(embeddings)
 # %% [markdown]
 # ### Plotting
 
-# Depthwise version (3 independent SincConv layers)
-dnn_models_tf.plot_sincnet_filter_response(
-    model=base_model,
-    fs=sampling_rate,
-    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
-)
-
-# Cross-axis version (single SincConv after channel_mix)
-dnn_models_tf.plot_sincnet_filter_response(
-    model=base_model,
-    fs=sampling_rate,
-    sincconv_layer_names=["sincconv"]
-)
-
 # %% [markdown]
 # ### Custom Color maps (Optional)
 # 
@@ -456,4 +442,16 @@ plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", f
 plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 
+# Depthwise version (3 independent SincConv layers)
+dnn_models_tf.plot_sincnet_filter_response(
+    model=base_model,
+    fs=sampling_rate,
+    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
+)
 
+# Cross-axis version (single SincConv after channel_mix)
+#dnn_models_tf.plot_sincnet_filter_response(
+#    model=base_model,
+#    fs=sampling_rate,
+#    sincconv_layer_names=["sincconv"]
+#)
