@@ -243,7 +243,7 @@ optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
 sincnet_options = {
     "cnn_N_filt":            [80, 60, 60], # Originally 80
-    "cnn_len_filt":          [31, 5, 5], # Originally 251, should be odd 
+    "cnn_len_filt":          [51, 5, 5], # Originally 251, should be odd 
     "cnn_max_pool_len":      [3, 3, 3],
     "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
     "cnn_drop":              [0.0, 0.1, 0.1],
@@ -252,7 +252,7 @@ sincnet_options = {
     "cnn_use_laynorm_inp":   True,
     "cnn_use_batchnorm_inp": False,
     "fs":                    sampling_rate,   # MotionSense dataset sampling rate
-    "sinc_min_low_hz":   0.1,
+    "sinc_min_low_hz":   0.5,
     "sinc_min_band_hz":  1.0,    
     "sinc_max_high_hz":  None,   # put None for Nyquist
     }
