@@ -72,17 +72,9 @@ class SincConv_fast(layers.Layer):
     https://arxiv.org/abs/1808.00158
     """
 
-    @staticmethod
-    def to_mel(hz):
-        return 2595.0 * np.log10(1.0 + hz / 700.0)
-
-    @staticmethod
-    def to_hz(mel):
-        return 700.0 * (10.0 ** (mel / 2595.0) - 1.0)
-
     def __init__(self, out_channels, kernel_size, sample_rate=16000,
                  stride=1, padding="valid",
-                 min_low_hz=50, min_band_hz=50, **kwargs):
+                 min_low_hz=0.1, min_band_hz=5, **kwargs):
         super().__init__(**kwargs)
 
         self.out_channels = out_channels
@@ -94,7 +86,7 @@ class SincConv_fast(layers.Layer):
         self.min_band_hz  = min_band_hz
 
         # Linear initialisation
-        low_hz  = 0.5
+        low_hz  = 0.1
         high_hz = sample_rate / 2.0 - (min_low_hz + min_band_hz)
         hz = np.linspace(low_hz, high_hz, out_channels + 1)
 
