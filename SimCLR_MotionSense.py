@@ -212,26 +212,26 @@ temperature = 0.1
 transform_funcs = [
     #transformations.resampling_fast_random,
     #transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    transformations.rotation_transform_vectorized # Use rotation trasnformation
+    #transformations.rotation_transform_vectorized # Use rotation trasnformation
 ]
-transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
+#transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
 # trasnformation_indices = [2] # Use rotation trasnformation only
 trasnformation_indices = [7, 5] # Use permutation and channel shuffle trasnformation
 
 trasnform_funcs_vectorized = [
-    transformations.noise_transform_vectorized, 
-    transformations.scaling_transform_vectorized, 
-    transformations.rotation_transform_vectorized, 
-    transformations.negate_transform_vectorized, 
-    transformations.time_flip_transform_vectorized, 
-    transformations.time_segment_permutation_transform_improved, 
-    transformations.time_warp_transform_low_cost, 
-    transformations.channel_shuffle_transform_vectorized
+    transformations.noise_transform_vectorized, # 0
+    transformations.scaling_transform_vectorized, # 1
+    transformations.rotation_transform_vectorized, # 2
+    transformations.negate_transform_vectorized, # 3
+    transformations.time_flip_transform_vectorized, # 4
+    transformations.time_segment_permutation_transform_improved, # 5
+    transformations.time_warp_transform_low_cost, # 6
+    transformations.channel_shuffle_transform_vectorized # 7
 ]
 #transform_funcs_names = ['noised', 'scaled', 'rotated', 'negated', 'time_flipped', 'permuted', 'time_warped', 'channel_shuffled']
 
-#transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
+transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
 # %%
 start_time = datetime.datetime.now()
