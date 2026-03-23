@@ -242,7 +242,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
 sincnet_options = {
-    "cnn_N_filt":            [80, 60, 60], # Originally 80
+    "cnn_N_filt":            [40, 60, 60], # Originally 80
     "cnn_len_filt":          [51, 5, 5], # Originally 251, should be odd 
     "cnn_max_pool_len":      [3, 3, 3],
     "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
@@ -254,7 +254,7 @@ sincnet_options = {
     "fs":                    sampling_rate,   # MotionSense dataset sampling rate
     "sinc_min_low_hz":   0.5,
     "sinc_min_band_hz":  1.0,    
-    "sinc_max_high_hz":  None,   # put None for Nyquist
+    "sinc_max_high_hz":  12,   # put None for Nyquist
     }
 
 base_model = sincnet_model.create_sincnet_model(input_shape, model_name="sincnet_model", sincnet_options=sincnet_options)
@@ -317,7 +317,7 @@ plt.plot(training_history.history['val_loss'], label='Validation loss', linestyl
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
-plt.savefig(f'{working_directory}loss_linear_eval.png')
+plt.savefig('loss_linear_eval.png')
 
 # %% [markdown]
 # ### Full HAR Model
@@ -354,12 +354,12 @@ print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
 plt.figure(figsize=(12,8))
-plt.plot(training_history.history['loss'],     label='Training loss',   linestyle='-')
+plt.plot(training_history.history['loss'], label='Training loss',   linestyle='-')
 plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
-plt.savefig(f'{working_directory}loss_full_eval.png')
+plt.savefig('loss_full_eval.png')
 
 # %% [markdown]
 # ## Extra: t-SNE Plots

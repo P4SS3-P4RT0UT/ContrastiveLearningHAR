@@ -99,7 +99,7 @@ class SincConv_fast(layers.Layer):
     https://arxiv.org/abs/1808.00158
     """
 
-    def __init__(self, out_channels, kernel_size, sample_rate=16000,
+    def __init__(self, out_channels, kernel_size, sample_rate=50,
                  stride=1, padding="valid",
                  min_low_hz=0.5, min_band_hz=1.0, max_high_hz=None,
                  **kwargs):
@@ -126,7 +126,7 @@ class SincConv_fast(layers.Layer):
                 f"no room for {out_channels} filters with min_low_hz={min_low_hz} and "
                 f"min_band_hz={min_band_hz}. Increase max_high_hz or reduce the floors."
             )
-        hz = np.linspace(low_hz, high_hz, out_channels + 1)
+        hz = np.linspace(low_hz, high_hz, out_channels + 1) # out_channels + 1 = number of filters?
 
         self._init_low_hz  = hz[:-1].reshape(-1, 1).astype(np.float32)
         self._init_band_hz = np.diff(hz).reshape(-1, 1).astype(np.float32)
