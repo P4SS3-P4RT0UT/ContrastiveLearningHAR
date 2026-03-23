@@ -165,7 +165,7 @@ def get_NT_Xent_loss_gradients(model, samples_transform_1, samples_transform_2, 
 
 
 
-def simclr_train_model(model, dataset, optimizer, batch_size, transformation_function, temperature=1.0, epochs=100, is_trasnform_function_vectorized=False, verbose=0):
+def simclr_train_model(model, dataset, optimizer, batch_size, transformation_function, temperature=1.0, epochs=100, is_trasnform_function_vectorized=False, verbose=0, monitor_fn=None, monitor_every=20):
     """
     Train a deep learning model using the SimCLR algorithm
 
@@ -243,6 +243,9 @@ def simclr_train_model(model, dataset, optimizer, batch_size, transformation_fun
         
         if verbose > 0:
             print("epoch: {} loss: {:.3f}".format(epoch + 1, np.mean(step_wise_loss)))
+        
+        if monitor_fn is not None and (epoch % monitor_every == 0 or epoch == epochs - 1):
+            monitor_fn(epoch + 1)
 
     return model, epoch_wise_loss
 

@@ -457,4 +457,36 @@ def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
     plt.savefig('sincnet_filter_response.png', dpi=150, bbox_inches='tight')
     plt.show()
 
-    
+def monitor_sincnet_filters(model, fs, layer_names, epoch):
+    """Call this periodically during or after training."""
+    fig, axes = plt.subplots(len(layer_names), 3, figsize=(15, 4 * len(layer_names)))
+    if len(layer_names) == 1:
+        axes = [axes]
+
+    for row, layer_name in enumerate(layer_names):
+        layer = model.get_layer(layer_name)
+
+        low_hz  = (layer.min_low_hz  + np.abs(layer.low_hz_.numpy())).flatten()
+        band_hz = (layer.min_band_hz + np.abs(layer.band_hz_.numpy())).flatten()
+        high_hz = np.clip(low_hz + band_hz, layer.min_low_hz,
+                          layer.max_high_hz).flatten()
+        bandwidth = high_hz - low_hz
+
+        axes[row][0].hist(low_hz,    bins=20, color='blue',  alpha=0.7)
+        axes[row][0].set_title(f'{layer_name} — Low Cutoff [Hz]')
+
+        axes[row][1].hist(high_hz,   bins=20, color='red',   alpha=0.7)
+        axes[row][1].set_title(f'{layer_name} — High Cutoff [Hz]')
+
+        axes[row][2].hist(bandwidth, bins=20, color='green', alpha=0.7)
+        axes[row][2].set_title(f'{layer_name} — Bandwidth [Hz]')
+
+        print(f"[Epoch {epoch}] {layer_name} | "
+              f"low: {low_hz.mean():.2f}±{low_hz.std():.2f} Hz | "
+              f"high: {high_hz.mean():.2f}±{high_hz.std():.2f} Hz | "
+              f"bw: {bandwidth.mean():.2f}±{bandwidth.std():.2f} Hz")
+
+    plt.suptitle(f'SincNet filter distribution — Epoch {epoch}')
+    plt.tight_layout()
+    plt.savefig(f'sincnet_filters_epoch{epoch}.png', dpi=150)
+    plt.close()

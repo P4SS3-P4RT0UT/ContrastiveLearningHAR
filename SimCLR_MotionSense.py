@@ -261,16 +261,18 @@ base_model = sincnet_model.create_sincnet_model(input_shape, model_name="sincnet
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
-trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
+trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1, monitor_fn=lambda epoch: dnn_models_tf.monitor_sincnet_filters(
+        simclr_model, sampling_rate, ["sincconv"], epoch, working_directory), monitor_every=20)
 
 simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
 
+# SimCLR pre-training (NT-Xent (contrastive) loss)
 plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.savefig('epoch_losses.png')
+plt.savefig('pretraining_epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -285,7 +287,7 @@ batch_size = 200
 tag = "linear_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=22)
+linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=21)
 
 linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
@@ -309,6 +311,13 @@ print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_
 print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
+plt.figure(figsize=(12,8))
+plt.plot(training_history.history['loss'], label='Training loss',   linestyle='-')
+plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
+plt.ylabel("Loss")
+plt.xlabel("Epoch")
+plt.legend()
+plt.savefig(f'{working_directory}loss_linear_eval.png')
 
 # %% [markdown]
 # ### Full HAR Model
@@ -320,7 +329,7 @@ batch_size = 200
 tag = "full_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=22, last_freeze_layer=7)
+full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=21, last_freeze_layer=15)
 
 full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
@@ -344,6 +353,14 @@ print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_te
 print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
+plt.figure(figsize=(12,8))
+plt.plot(training_history.history['loss'],     label='Training loss',   linestyle='-')
+plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
+plt.ylabel("Loss")
+plt.xlabel("Epoch")
+plt.legend()
+plt.savefig(f'{working_directory}loss_full_eval.png')
+
 # %% [markdown]
 # ## Extra: t-SNE Plots
 
@@ -359,7 +376,7 @@ perplexity = 30.0
 # ### t-SNE Representations
 
 # %%
-intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=22)
+intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=21)
 intermediate_model.summary()
 
 embeddings = intermediate_model.predict(np_test[0], batch_size=600)
