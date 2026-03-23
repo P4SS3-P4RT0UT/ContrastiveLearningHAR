@@ -262,7 +262,7 @@ simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1, monitor_fn=lambda epoch: dnn_models_tf.monitor_sincnet_filters(
-        simclr_model, sampling_rate, ["sincconv"], epoch, working_directory), monitor_every=20)
+        simclr_model, sampling_rate, ["sincconv"], epoch), monitor_every=20)
 
 simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
