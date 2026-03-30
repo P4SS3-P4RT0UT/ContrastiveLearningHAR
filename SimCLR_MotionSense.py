@@ -115,8 +115,8 @@ transformation_multiple = 1
 dataset_name = 'motion_sense.pkl'
 dataset_name_user_split = 'motion_sense_user_split.pkl'
 
-label_list = ['null', 'sit', 'std'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
-label_list_full_name = ['null', 'sitting', 'standing'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+label_list = ['null', 'wlk', 'ups', 'dws', 'jog'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
+label_list_full_name = ['null', 'walking', 'walking upstairs', 'walking downstairs', 'jogging'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
 has_null_class = True
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
