@@ -242,7 +242,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
 sincnet_options = {
-    "cnn_N_filt":            [40, 60, 60], # Originally 80
+    "cnn_N_filt":            [20, 60, 60], # Originally 80
     "cnn_len_filt":          [51, 5, 5], # Originally 251, should be odd 
     "cnn_max_pool_len":      [3, 3, 3],
     "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
@@ -252,9 +252,9 @@ sincnet_options = {
     "cnn_use_laynorm_inp":   True,
     "cnn_use_batchnorm_inp": False,
     "fs":                    sampling_rate,   # MotionSense dataset sampling rate
-    "sinc_min_low_hz":   0.5,
-    "sinc_min_band_hz":  1.0,    
-    "sinc_max_high_hz":  12,   # put None for Nyquist
+    "sinc_min_low_hz":   0.1,
+    "sinc_min_band_hz":  0.5,    
+    "sinc_max_high_hz":  None,   # put None for Nyquist
     }
 
 base_model = sincnet_model.create_sincnet_model(input_shape, model_name="sincnet_model", sincnet_options=sincnet_options)
