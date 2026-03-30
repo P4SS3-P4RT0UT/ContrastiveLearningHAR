@@ -107,7 +107,7 @@ with open(working_directory + 'motion_sense_user_split.pkl', 'wb') as f:
 
 # %%
 # Parameters
-window_size = 400
+window_size = 400 # larger window if smaller bandwitdth
 input_shape = (window_size, 3)
 
 # Dataset Metadata 
@@ -115,8 +115,8 @@ transformation_multiple = 1
 dataset_name = 'motion_sense.pkl'
 dataset_name_user_split = 'motion_sense_user_split.pkl'
 
-label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
-label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+label_list = ['null', 'sit', 'std'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
+label_list_full_name = ['null', 'sitting', 'standing'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
 has_null_class = True
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
@@ -212,12 +212,12 @@ temperature = 0.1
 transform_funcs = [
     #transformations.resampling_fast_random,
     #transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    #transformations.rotation_transform_vectorized # Use rotation trasnformation
+    transformations.rotation_transform_vectorized # Use rotation trasnformation
 ]
-#transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
+transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
 # trasnformation_indices = [2] # Use rotation trasnformation only
-trasnformation_indices = [7, 5] # Use permutation and channel shuffle trasnformation
+#trasnformation_indices = [7, 5] # Use permutation and channel shuffle trasnformation
 
 trasnform_funcs_vectorized = [
     transformations.noise_transform_vectorized, # 0
@@ -231,7 +231,7 @@ trasnform_funcs_vectorized = [
 ]
 #transform_funcs_names = ['noised', 'scaled', 'rotated', 'negated', 'time_flipped', 'permuted', 'time_warped', 'channel_shuffled']
 
-transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
+#transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
 # %%
 start_time = datetime.datetime.now()
