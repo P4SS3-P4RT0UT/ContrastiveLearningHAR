@@ -115,8 +115,8 @@ transformation_multiple = 1
 dataset_name = 'motion_sense.pkl'
 dataset_name_user_split = 'motion_sense_user_split.pkl'
 
-label_list = ['null', 'wlk', 'ups', 'dws', 'jog'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
-label_list_full_name = ['null', 'walking', 'walking upstairs', 'walking downstairs', 'jogging'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+label_list = ['null', 'sit', 'std'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
+label_list_full_name = ['null', 'sitting', 'standing'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
 has_null_class = True
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
@@ -262,7 +262,7 @@ simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1, monitor_fn=lambda epoch: dnn_models_tf.monitor_sincnet_filters(
-        simclr_model, sampling_rate, ["sincconv"], epoch), monitor_every=20)
+        simclr_model, sampling_rate, ["sincconv"], epoch), monitor_every=50)
 
 simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
