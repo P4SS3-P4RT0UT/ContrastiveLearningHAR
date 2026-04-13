@@ -458,6 +458,6 @@ plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches=
 simclr_utitlities.plot_sincnet_filter_response(
     model=base_model,
     fs=sampling_rate,
-    sincconv_layer_names=["sincconv"],
+    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"],
     smooth_sigma=10,
 )

@@ -378,58 +378,84 @@ def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
     """
     Plot the cumulative frequency response of learned SincNet filters,
     reproducing Fig. 3 from Ravanelli & Bengio (2018).
- 
+
+    Compatible with both depthwise=True and depthwise=False modes of SincConv1D:
+
+    depthwise=True   f1_ / band_ shape: (num_channels, num_filters)
+                     Curves are plotted per channel (one colour each).
+    depthwise=False  f1_ / band_ shape: (num_filters,)
+                     A single curve is plotted.
+
     Parameters
     ----------
     model                : tf.keras.Model
     fs                   : int    — sample rate in Hz
     sincconv_layer_names : list[str] — layer names to plot,
-                           e.g. ["sincconv"] or ["sincconv_ch0", ..., "sincconv_ch2"]
+                           always ["sincconv"] regardless of depthwise mode
     n_freqs              : int    — frequency axis resolution
-    smooth_sigma         : float  — Gaussian smoothing sigma (set to 0 to disable)
+    smooth_sigma         : float  — Gaussian smoothing sigma (0 to disable)
     """
-    freqs  = np.linspace(0, fs / 2, n_freqs)
-    colors = ['red', 'blue', 'green', 'orange', 'purple']
+    freqs   = np.linspace(0, fs / 2, n_freqs)
     nyquist = fs / 2.0
- 
+    colors  = ['red', 'blue', 'green', 'orange', 'purple']
+
     plt.figure(figsize=(10, 5))
- 
+
     for idx, layer_name in enumerate(sincconv_layer_names):
         layer = model.get_layer(layer_name)
- 
-        # f1_ and band_ are stored normalised to [0, 1] (fraction of Nyquist).
-        # Effective cutoffs mirror the constraint applied in call():
-        #   f1  = (min_low_hz  / nyquist) + |f1_|
-        #   f2  = clip(f1 + (min_band_hz / nyquist) + |band_|, 0, 1)
-        # Multiply by nyquist to recover Hz.
-        f1_norm  = layer.min_low_hz  / nyquist + np.abs(layer.f1_.numpy())    # (N_filt,)
-        f2_norm  = np.clip(
-            f1_norm + layer.min_band_hz / nyquist + np.abs(layer.band_.numpy()),
-            0.0, 1.0
-        )                                                                       # (N_filt,)
- 
-        low_hz  = f1_norm * nyquist   # (N_filt,)
-        high_hz = f2_norm * nyquist   # (N_filt,)
- 
-        # Reshape for broadcasting against the frequency axis
-        low_hz  = low_hz.reshape(-1, 1)   # (N_filt, 1)
-        high_hz = high_hz.reshape(-1, 1)  # (N_filt, 1)
- 
-        freqs_row = freqs.reshape(1, -1)                          # (1, n_freqs)
-        in_band   = (freqs_row >= low_hz) & (freqs_row <= high_hz)
- 
-        cumulative = in_band.sum(axis=0).astype(float)
-        cumulative /= cumulative.max()
- 
-        if smooth_sigma > 0:
-            cumulative = gaussian_filter1d(cumulative, sigma=smooth_sigma)
- 
-        plt.plot(freqs, cumulative,
-                 color=colors[idx % len(colors)],
-                 linestyle='-' if idx == 0 else '--',
-                 linewidth=2,
-                 label=layer_name if len(sincconv_layer_names) > 1 else 'SincNet')
- 
+
+        # f1_ and band_ are normalised (fraction of Nyquist).
+        # Recover effective Hz cutoffs mirroring the constraint in call():
+        #   f1  = min_low_hz/nyquist  + |f1_|
+        #   f2  = clip(f1 + min_band_hz/nyquist + |band_|, 0, 1)
+        f1_raw   = layer.f1_.numpy()     # (num_filters,) or (num_channels, num_filters)
+        band_raw = layer.band_.numpy()
+
+        if f1_raw.ndim == 2:
+            # depthwise=True: iterate over channels
+            num_channels = f1_raw.shape[0]
+            for ch in range(num_channels):
+                f1_norm  = layer.min_low_hz  / nyquist + np.abs(f1_raw[ch])
+                f2_norm  = np.clip(
+                    f1_norm + layer.min_band_hz / nyquist + np.abs(band_raw[ch]),
+                    0.0, 1.0,
+                )
+                low_hz  = (f1_norm * nyquist).reshape(-1, 1)
+                high_hz = (f2_norm * nyquist).reshape(-1, 1)
+
+                in_band    = (freqs.reshape(1, -1) >= low_hz) & (freqs.reshape(1, -1) <= high_hz)
+                cumulative = in_band.sum(axis=0).astype(float)
+                cumulative /= cumulative.max()
+                if smooth_sigma > 0:
+                    cumulative = gaussian_filter1d(cumulative, sigma=smooth_sigma)
+
+                plt.plot(freqs, cumulative,
+                         color=colors[ch % len(colors)],
+                         linestyle='-',
+                         linewidth=2,
+                         label=f"{layer_name} ch{ch}")
+        else:
+            # depthwise=False: single shared bank
+            f1_norm  = layer.min_low_hz  / nyquist + np.abs(f1_raw)
+            f2_norm  = np.clip(
+                f1_norm + layer.min_band_hz / nyquist + np.abs(band_raw),
+                0.0, 1.0,
+            )
+            low_hz  = (f1_norm * nyquist).reshape(-1, 1)
+            high_hz = (f2_norm * nyquist).reshape(-1, 1)
+
+            in_band    = (freqs.reshape(1, -1) >= low_hz) & (freqs.reshape(1, -1) <= high_hz)
+            cumulative = in_band.sum(axis=0).astype(float)
+            cumulative /= cumulative.max()
+            if smooth_sigma > 0:
+                cumulative = gaussian_filter1d(cumulative, sigma=smooth_sigma)
+
+            plt.plot(freqs, cumulative,
+                     color=colors[idx % len(colors)],
+                     linestyle='-' if idx == 0 else '--',
+                     linewidth=2,
+                     label=layer_name if len(sincconv_layer_names) > 1 else 'SincNet')
+
     plt.xlabel('Frequency [Hz]', fontsize=13)
     plt.ylabel('Normalized Filter Sum', fontsize=13)
     plt.title('Cumulative frequency response of the SincNet filters', fontsize=14)
