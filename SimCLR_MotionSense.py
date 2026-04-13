@@ -37,10 +37,8 @@ sns.set_context('poster')
 import raw_data_processing
 import data_pre_processing
 import simclr_models
-import sincnet_model
 import simclr_utitlities
 import transformations
-import dnn_models_tf
 # %%
 working_directory = 'test_run/'
 dataset_save_path = working_directory
@@ -115,8 +113,8 @@ transformation_multiple = 1
 dataset_name = 'motion_sense.pkl'
 dataset_name_user_split = 'motion_sense_user_split.pkl'
 
-label_list = ['null', 'sit', 'std'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
-label_list_full_name = ['null', 'sitting', 'standing'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
+label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
 has_null_class = True
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
@@ -241,28 +239,13 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-sincnet_options = {
-    "cnn_N_filt":            [20, 60, 60], # Originally 80
-    "cnn_len_filt":          [51, 5, 5], # Originally 251, should be odd 
-    "cnn_max_pool_len":      [3, 3, 3],
-    "cnn_act":               ["leaky_relu", "leaky_relu", "leaky_relu"],
-    "cnn_drop":              [0.0, 0.1, 0.1],
-    "cnn_use_laynorm":       [True, True, True],
-    "cnn_use_batchnorm":     [False, False, False],
-    "cnn_use_laynorm_inp":   True,
-    "cnn_use_batchnorm_inp": False,
-    "fs":                    sampling_rate,   # MotionSense dataset sampling rate
-    "sinc_min_low_hz":   0.1,
-    "sinc_min_band_hz":  0.5,    
-    "sinc_max_high_hz":  None,   # put None for Nyquist
-    }
-
-base_model = sincnet_model.create_sincnet_model(input_shape, model_name="sincnet_model", sincnet_options=sincnet_options)
+base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=32, sinc_kernel_size=25, sample_rate=sampling_rate)
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
-trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1, monitor_fn=lambda epoch: dnn_models_tf.monitor_sincnet_filters(
-        simclr_model, sampling_rate, ["sincconv"], epoch), monitor_every=50)
+simclr_utitlities.print_layer_indices(simclr_model)
+
+trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
 simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
@@ -287,7 +270,7 @@ batch_size = 200
 tag = "linear_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=21)
+linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=7)
 
 linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
@@ -305,6 +288,7 @@ training_history = linear_evaluation_model.fit(
 )
 
 linear_eval_best_model = tf.keras.models.load_model(linear_eval_best_model_file_name)
+simclr_utitlities.print_layer_indices(linear_eval_best_model)
 
 print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
@@ -329,7 +313,7 @@ batch_size = 200
 tag = "full_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=21, last_freeze_layer=15)
+full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=7, last_freeze_layer=4)
 
 full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
@@ -347,6 +331,7 @@ training_history = full_evaluation_model.fit(
 )
 
 full_eval_best_model = tf.keras.models.load_model(full_eval_best_model_file_name)
+simclr_utitlities.print_layer_indices(full_eval_best_model)
 
 print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
@@ -376,7 +361,7 @@ perplexity = 30.0
 # ### t-SNE Representations
 
 # %%
-intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=21)
+intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=7)
 intermediate_model.summary()
 
 embeddings = intermediate_model.predict(np_test[0], batch_size=600)
@@ -470,7 +455,7 @@ plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches=
 #)
 
 # Cross-axis version (single SincConv after channel_mix)
-dnn_models_tf.plot_sincnet_filter_response(
+simclr_utitlities.plot_sincnet_filter_response(
     model=base_model,
     fs=sampling_rate,
     sincconv_layer_names=["sincconv"],
