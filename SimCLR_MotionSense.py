@@ -447,17 +447,9 @@ plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", f
 plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 
-# Depthwise version (3 independent SincConv layers)
-#dnn_models_tf.plot_sincnet_filter_response(
-#    model=base_model,
-#    fs=sampling_rate,
-#    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"]
-#)
-
-# Cross-axis version (single SincConv after channel_mix)
 simclr_utitlities.plot_sincnet_filter_response(
     model=base_model,
     fs=sampling_rate,
-    sincconv_layer_names=["sincconv_ch0", "sincconv_ch1", "sincconv_ch2"],
+    sincconv_layer_names=["sincconv"],
     smooth_sigma=10,
 )
