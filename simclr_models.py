@@ -302,7 +302,7 @@ def extract_intermediate_model_from_base_model(base_model, intermediate_layer=7)
 
 
 
-
+@tf.keras.utils.register_keras_serializable(package="simclr_models")
 class SincConv1D(tf.keras.layers.Layer):
     """
     Learnable sinc-based bandpass filter bank for multi-channel time series.
@@ -446,7 +446,8 @@ class SincConv1D(tf.keras.layers.Layer):
 
         def sinc(x):
             px = np.pi * x
-            return tf.where(tf.equal(x, 0.0), tf.ones_like(x), tf.sin(px) / px)
+            is_zero = tf.cast(tf.abs(x) < 1e-7, tf.float32)
+            return tf.math.divide_no_nan(tf.sin(px), px) + is_zero
 
         bp  = 2.0*f2*sinc(2.0*f2*n) - 2.0*f1*sinc(2.0*f1*n)
         bp  = bp * tf.reshape(self.window_, (-1, 1))
