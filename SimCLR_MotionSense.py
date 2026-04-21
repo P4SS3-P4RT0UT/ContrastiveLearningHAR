@@ -113,8 +113,8 @@ transformation_multiple = 1
 dataset_name = 'motion_sense.pkl'
 dataset_name_user_split = 'motion_sense_user_split.pkl'
 
-label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
-label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+label_list = ['null', 'wlk', 'ups', 'dws', 'jog'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
+label_list_full_name = ['null', 'walking', 'walking upstairs', 'walking downstairs', 'jogging'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
 has_null_class = True
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
@@ -239,7 +239,7 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=96, sinc_kernel_size=50, sample_rate=sampling_rate, depthwise=False)
+base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=32, sinc_kernel_size=50, sample_rate=sampling_rate, depthwise=True)
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
