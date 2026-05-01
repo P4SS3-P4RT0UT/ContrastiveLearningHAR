@@ -53,7 +53,14 @@ if not os.path.exists(working_directory):
 # 
 # Citation:
 # ```
-# 
+# @article{anguita2013public,
+#   title={A public domain dataset for human activity recognition using smartphones},
+#   author={Anguita, Davide and Ghio, Alessandro and Oneto, Luca and Parra, Xavier and Reyes-Ortiz, Jorge L},
+#   journal={Esann},
+#   volume={3},
+#   pages={3},
+#   year={2013}
+# }
 # ```
 
 # %% [markdown]
@@ -85,26 +92,28 @@ with open(working_directory + 'uci_har_user_split.pkl', 'wb') as f:
     }, f)
 
 # %%
-input_shape = (128, 3)  # UCI-HAR data shape: 128 time steps, 3 axes (x, y, z)  
+window_size = 128  
+input_shape = (window_size, 3)
 
 dataset_name = 'uci_har.pkl'
 dataset_name_user_split = 'uci_har_user_split.pkl'
 
-label_list = [1, 2, 3, 4, 5, 6]
-label_list_full_name = ['walking', 'walking upstairs', 'walking downstairs', 'sitting', 'standing', 'laying']
-has_null_class = False
+label_list = ['null', 'WALKING', 'WALKING_UPSTAIRS', 'WALKING_DOWNSTAIRS', 'SITTING', 'STANDING', 'LAYING']
+label_list_full_name = ['null', 'walking', 'walking upstairs', 'walking downstairs', 'sitting', 'standing', 'laying']
+has_null_class = True
 
-label_map = dict([(l, i) for i, l in enumerate(label_list)])
+label_map = dict([(i, i) for i in range(len(label_list))])
 
 output_shape = len(label_list)
 
 model_save_name = f"uci_har_acc"
 
+sampling_rate = 50.0 
+
 # a fixed user-split
 
 test_users_fixed = [2, 4, 9, 10, 12, 13, 18, 20, 24] # predefined test users for UCI-HAR
 def get_fixed_split_users(har_users):
-    # test_users = har_users[0::5]
     test_users = test_users_fixed
     train_users = [u for u in har_users if u not in test_users]
     return (train_users, test_users)
@@ -119,12 +128,15 @@ har_users = list(user_datasets.keys())
 train_users, test_users = get_fixed_split_users(har_users)
 
 # %%
-np_train, np_val, np_test = data_pre_processing.pre_process_uci_har_dataset(
+np_train, np_val, np_test = data_pre_processing.pre_process_dataset_composite(
     user_datasets=user_datasets, 
     label_map=label_map, 
     output_shape=output_shape, 
     train_users=train_users, 
-    test_users=test_users,
+    test_users=test_users, 
+    window_size=window_size//2, 
+    shift=window_size, 
+    normalise_dataset=True, 
     verbose=1
 )
 
@@ -140,7 +152,7 @@ decay_steps = 1000
 epochs = 200
 temperature = 0.1
 transform_funcs = [
-    transformations.resampling_fast_random,
+    transformations.time_warp_transform_improved,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
     # transformations.rotation_transform_vectorized # Use rotation trasnformation
 ]
