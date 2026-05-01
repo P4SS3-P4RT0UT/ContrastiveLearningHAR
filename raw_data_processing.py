@@ -159,7 +159,7 @@ def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
 
 def process_capture24_accelerometer_files(accelerometer_data_folder_path):
 
-    mapping_df = pd.read_csv('annotation-label-dictionary.csv')
+    mapping_df = pd.read_csv(os.path.join(accelerometer_data_folder_path, 'annotation-label-dictionary.csv'))
     label_map = mapping_df.set_index('annotation')['label:Walmsley2020'].to_dict()
 
     user_datasets = {}
