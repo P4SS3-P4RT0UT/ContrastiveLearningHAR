@@ -134,8 +134,8 @@ np_train, np_val, np_test = data_pre_processing.pre_process_dataset_composite(
     output_shape=output_shape, 
     train_users=train_users, 
     test_users=test_users, 
-    window_size=window_size//2, 
-    shift=window_size, 
+    window_size=window_size, 
+    shift=window_size//2, 
     normalise_dataset=True, 
     verbose=1
 )
