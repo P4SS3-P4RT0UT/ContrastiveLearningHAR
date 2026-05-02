@@ -466,6 +466,70 @@ def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
     plt.savefig('sincnet_filter_response.png', dpi=150, bbox_inches='tight')
     plt.show()
 
+def plot_sincnet_filter_scatter(model, fs, layer_name="sincconv"):
+    """
+    Scatter plot of learned SincNet filter characteristics.
+ 
+    Each point represents one learned filter, positioned by its centre
+    frequency (fc = (f1 + f2) / 2) on the x-axis and its bandwidth
+    (f2 - f1) on the y-axis.
+ 
+    depthwise=True  : one colour per channel (red, blue, green),
+                      all channels overlaid on the same plot.
+    depthwise=False : single colour (red), one point per filter.
+ 
+    Parameters
+    ----------
+    model      : tf.keras.Model
+    fs         : float  — sample rate in Hz
+    layer_name : str    — name of the SincConv1D layer (always "sincconv")
+    """
+    layer   = model.get_layer(layer_name)
+    nyquist = fs / 2.0
+ 
+    f1_raw   = layer.f1_.numpy()    # (num_channels, num_filters) or (num_filters,)
+    band_raw = layer.band_.numpy()
+ 
+    # Recover effective Hz cutoffs, mirroring the constraint in call()
+    f1_hz = (layer.min_low_hz / nyquist + np.abs(f1_raw)) * nyquist
+    f2_hz = np.clip(
+        f1_hz + (layer.min_band_hz / nyquist + np.abs(band_raw)) * nyquist,
+        0.0, nyquist,
+    )
+    fc_hz = (f1_hz + f2_hz) / 2.0
+    bw_hz = f2_hz - f1_hz
+ 
+    fig, ax = plt.subplots(figsize=(8, 5))
+ 
+    if f1_raw.ndim == 2:
+        # depthwise=True: f1_hz / bw_hz shape (num_channels, num_filters)
+        channel_colors  = ['red', 'blue', 'green']
+        channel_labels  = [f'ch{i}' for i in range(f1_hz.shape[0])]
+        for ch, (color, label) in enumerate(zip(channel_colors, channel_labels)):
+            ax.scatter(
+                fc_hz[ch], bw_hz[ch],
+                color=color, label=label,
+                alpha=0.75, edgecolors='none', s=60,
+            )
+    else:
+        # depthwise=False: f1_hz / bw_hz shape (num_filters,)
+        ax.scatter(
+            fc_hz, bw_hz,
+            color='red', label='shared bank',
+            alpha=0.75, edgecolors='none', s=60,
+        )
+ 
+    ax.set_xlabel('Centre frequency $f_c$ [Hz]', fontsize=13)
+    ax.set_ylabel('Bandwidth [Hz]', fontsize=13)
+    ax.set_title('Learned SincNet filter characteristics', fontsize=14)
+    ax.set_xlim(0, nyquist)
+    ax.set_ylim(bottom=0)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('sincnet_filter_scatter.png', dpi=150, bbox_inches='tight')
+    plt.show()
+
 def print_layer_indices(model):
     """
     Print a numbered table of every layer in a model.
