@@ -39,7 +39,6 @@ import data_pre_processing
 import simclr_models
 import simclr_utitlities
 import transformations
-
 # %%
 working_directory = 'test_run/'
 dataset_save_path = working_directory
@@ -106,7 +105,7 @@ with open(working_directory + 'motion_sense_user_split.pkl', 'wb') as f:
 
 # %%
 # Parameters
-window_size = 400
+window_size = 400 # larger window if smaller bandwitdth
 input_shape = (window_size, 3)
 
 # Dataset Metadata 
@@ -114,8 +113,8 @@ transformation_multiple = 1
 dataset_name = 'motion_sense.pkl'
 dataset_name_user_split = 'motion_sense_user_split.pkl'
 
-label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
-label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
+label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog'] # label_list = ['null', 'sit', 'std', 'wlk', 'ups', 'dws', 'jog']
+label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging'] # label_list_full_name = ['null', 'sitting', 'standing', 'walking', 'walking upstairs', 'walking downstairs', 'jogging']
 has_null_class = True
 
 label_map = dict([(l, i) for i, l in enumerate(label_list)])
@@ -209,9 +208,9 @@ decay_steps = 1000
 epochs = 200
 temperature = 0.1
 transform_funcs = [
-    transformations.time_warp_transform_improved,
+    #transformations.noise_transform_vectorized,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    #transformations.rotation_transform_vectorized # Use rotation trasnformation
+    transformations.time_warp_transform_improved # Use time warp trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
@@ -219,16 +218,16 @@ transformation_function = simclr_utitlities.generate_composite_transform_functio
 trasnformation_indices = [7, 5] # Use permutation and channel shuffle trasnformation
 
 trasnform_funcs_vectorized = [
-    transformations.noise_transform_vectorized, 
-    transformations.scaling_transform_vectorized, 
-    transformations.rotation_transform_vectorized, 
-    transformations.negate_transform_vectorized, 
-    transformations.time_flip_transform_vectorized, 
-    transformations.time_segment_permutation_transform_improved, 
-    transformations.time_warp_transform_low_cost, 
-    transformations.channel_shuffle_transform_vectorized
+    transformations.noise_transform_vectorized, # 0
+    transformations.scaling_transform_vectorized, # 1
+    transformations.rotation_transform_vectorized, # 2
+    transformations.negate_transform_vectorized, # 3
+    transformations.time_flip_transform_vectorized, # 4
+    transformations.time_segment_permutation_transform_improved, # 5
+    transformations.time_warp_transform_low_cost, # 6
+    transformations.channel_shuffle_transform_vectorized # 7
 ]
-#transform_funcs_names = ['noised', 'scaled', 'rotated', 'negated', 'time_flipped', 'permuted', 'time_warped', 'channel_shuffled']
+transform_funcs_names = ['noised', 'scaled', 'rotated', 'negated', 'time_flipped', 'permuted', 'time_warped', 'channel_shuffled']
 
 #transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
@@ -240,20 +239,23 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_base_model(input_shape, model_name="base_model")
+base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=16, sinc_kernel_size=100, sample_rate=sampling_rate, depthwise=True)
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
+
+simclr_utitlities.print_layer_indices(simclr_model)
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
 simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
 trained_simclr_model.save(simclr_model_save_path)
 
+# SimCLR pre-training (NT-Xent (contrastive) loss)
 plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.savefig('epoch_losses.png')
+plt.savefig('pretraining_epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -268,7 +270,7 @@ batch_size = 200
 tag = "linear_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=7)
+linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=8)
 
 linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
@@ -286,12 +288,20 @@ training_history = linear_evaluation_model.fit(
 )
 
 linear_eval_best_model = tf.keras.models.load_model(linear_eval_best_model_file_name)
+simclr_utitlities.print_layer_indices(linear_eval_best_model)
 
 print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
+plt.figure(figsize=(12,8))
+plt.plot(training_history.history['loss'], label='Training loss',   linestyle='-')
+plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
+plt.ylabel("Loss")
+plt.xlabel("Epoch")
+plt.legend()
+plt.savefig('loss_linear_eval.png')
 
 # %% [markdown]
 # ### Full HAR Model
@@ -303,7 +313,7 @@ batch_size = 200
 tag = "full_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="TPN", intermediate_layer=7, last_freeze_layer=4)
+full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=8, last_freeze_layer=5)
 
 full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
@@ -321,11 +331,20 @@ training_history = full_evaluation_model.fit(
 )
 
 full_eval_best_model = tf.keras.models.load_model(full_eval_best_model_file_name)
+simclr_utitlities.print_layer_indices(full_eval_best_model)
 
 print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
+
+plt.figure(figsize=(12,8))
+plt.plot(training_history.history['loss'], label='Training loss',   linestyle='-')
+plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
+plt.ylabel("Loss")
+plt.xlabel("Epoch")
+plt.legend()
+plt.savefig('loss_full_eval.png')
 
 # %% [markdown]
 # ## Extra: t-SNE Plots
@@ -338,12 +357,11 @@ print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_t
 target_model = simclr_model 
 perplexity = 30.0
 
-
 # %% [markdown]
 # ### t-SNE Representations
 
 # %%
-intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=7)
+intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=8)
 intermediate_model.summary()
 
 embeddings = intermediate_model.predict(np_test[0], batch_size=600)
@@ -354,7 +372,6 @@ tsne_projections = tsne_model.fit_transform(embeddings)
 
 # %% [markdown]
 # ### Plotting
-
 
 # %% [markdown]
 # ### Custom Color maps (Optional)
@@ -430,4 +447,15 @@ plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", f
 plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 
+simclr_utitlities.plot_sincnet_filter_response(
+    model=base_model,
+    fs=sampling_rate,
+    sincconv_layer_names=["sincconv"],
+    smooth_sigma=10,
+)
 
+simclr_utitlities.plot_sincnet_filter_scatter(
+    model=base_model,
+    fs=sampling_rate,
+    layer_name="sincconv",
+)
