@@ -3,6 +3,8 @@ import re
 import os
 import pandas as pd
 import numpy as np
+from multiprocessing import Pool
+from functools import partial
 
 __author__ = "C. I. Tang"
 __copyright__ = "Copyright (C) 2020 C. I. Tang"
@@ -35,8 +37,7 @@ def process_motion_sense_accelerometer_files(accelerometer_data_folder_path):
 
         accelerometer_data_folder_path (str):
             the path to the folder containing the data files (unzipped)
-            e.g. UCI_HAR_Dataset/
-            the trial folders should be directly inside it (e.g. UCI_HAR_Dataset/dws_1/)
+            the trial folders should be directly inside it
 
     Return:
         
@@ -100,7 +101,7 @@ def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
             e.g. UCI_HAR_Dataset/
             the train and test folders should be directly inside it (e.g. UCI_HAR_Dataset/train/)
             the raw data files should be inside the Inertial Signals subfolder of train and test folders (e.g. UCI_HAR_Dataset/train/Inertial Signals/)
-            there is one file per accelerometer axis (e.g. body_acc_x_train.txt)
+            there is one file per accelerometer axis (e.g. total_acc_x_train.txt)
 
     Return:
         
@@ -119,30 +120,88 @@ def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
         inertial_signals_folder = os.path.join(dataset_folder, "Inertial Signals")
 
         # Read raw data files
-        body_acc_x = pd.read_csv(os.path.join(inertial_signals_folder, "body_acc_x_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy()
-        body_acc_y = pd.read_csv(os.path.join(inertial_signals_folder, "body_acc_y_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy()
-        body_acc_z = pd.read_csv(os.path.join(inertial_signals_folder, "body_acc_z_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy()
+        total_acc_x = pd.read_csv(os.path.join(inertial_signals_folder, "total_acc_x_" + dataset_type + ".txt"), sep=r'\s+', header=None).to_numpy()
+        total_acc_y = pd.read_csv(os.path.join(inertial_signals_folder, "total_acc_y_" + dataset_type + ".txt"), sep=r'\s+', header=None).to_numpy()
+        total_acc_z = pd.read_csv(os.path.join(inertial_signals_folder, "total_acc_z_" + dataset_type + ".txt"), sep=r'\s+', header=None).to_numpy()
 
         # Read activity labels
-        activity_labels = pd.read_csv(os.path.join(dataset_folder, "y_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy().flatten()
+        activity_labels = pd.read_csv(os.path.join(dataset_folder, "y_" + dataset_type + ".txt"), sep=r'\s+', header=None).to_numpy().flatten()
 
         # Read user ids
-        user_ids = pd.read_csv(os.path.join(dataset_folder, "subject_" + dataset_type + ".txt"), sep='\s+', header=None).to_numpy().flatten()
+        user_ids = pd.read_csv(os.path.join(dataset_folder, "subject_" + dataset_type + ".txt"), sep=r'\s+', header=None).to_numpy().flatten().astype(int)
 
-        num_samples = body_acc_x.shape[0]
+        num_samples = total_acc_x.shape[0]
 
         # Loop through samples
         for i in range(num_samples):
-            user_id = user_ids[i]
-            features = np.stack([body_acc_x[i], body_acc_y[i], body_acc_z[i]], axis=-1) 
+            user_id = user_id = int(user_ids[i])
+            features = np.stack([total_acc_x[i], total_acc_y[i], total_acc_z[i]], axis=-1) 
             label = activity_labels[i]
+            label_array = np.array([label] * features.shape[0])
 
             if user_id not in user_datasets:
                 user_datasets[user_id] = []
-            #user_datasets[user_id].append((features, np.array([label]*features.shape[0])))
-            user_datasets[user_id].append((features, label))
-            
+
+            user_datasets[user_id].append((features, label_array))
+
+    for user_id in list(user_datasets.keys()):
+        
+        all_features = [pair[0] for pair in user_datasets[user_id]]
+        all_labels = [pair[1] for pair in user_datasets[user_id]]
+        
+        merged_features = np.concatenate(all_features, axis=0)
+        merged_labels = np.concatenate(all_labels, axis=0)
+        
+        user_datasets[user_id] = [(merged_features, merged_labels)]
+        
     return user_datasets
     
+    return user_datasets
 
+def process_single_file(file_path, label_map):
+    """Process a single participant file"""
 
+    filename = os.path.split(file_path)[-1]
+    user_id_match = re.search(r'P(?P<user_id>[0-9]{3})\.csv\.gz', filename)
+    
+    if user_id_match is None:
+        return None
+        
+    user_id = int(user_id_match.group('user_id'))
+    print(f"Processing {file_path}")
+    
+    df = pd.read_csv(file_path, compression='gzip', engine='pyarrow', dtype={4: str}, usecols=['time', 'x', 'y', 'z', 'annotation'])
+    df = df.dropna(how="any")
+    
+    df['annotation'] = df['annotation'].map(label_map)
+    df = df.dropna(subset=['annotation'])
+    
+    df = df.sort_values('time').reset_index(drop=True)
+    
+    values = df[["x", "y", "z"]].values
+    labels = df['annotation'].values
+    
+    return (user_id, values, labels)
+
+def process_capture24_accelerometer_files(accelerometer_data_folder_path, n_workers=8):
+    mapping_df = pd.read_csv(os.path.join(accelerometer_data_folder_path, 'annotation-label-dictionary.csv'))
+    label_map = mapping_df.set_index('annotation')['label:Walmsley2020'].to_dict()
+    
+    all_files = sorted(glob.glob(os.path.join(accelerometer_data_folder_path, "P*.csv.gz")))
+    
+    # Parallel processing
+    process_func = partial(process_single_file, label_map=label_map)
+    
+    with Pool(processes=n_workers) as pool:
+        results = pool.map(process_func, all_files)
+    
+    # Aggregate results
+    user_datasets = {}
+    for result in results:
+        if result is not None:
+            user_id, values, labels = result
+            if user_id not in user_datasets:
+                user_datasets[user_id] = []
+            user_datasets[user_id].append((values, labels))
+    
+    return user_datasets
