@@ -250,7 +250,7 @@ def simclr_train_model(model, dataset, optimizer, batch_size, transformation_fun
     return model, epoch_wise_loss
 
 
-def evaluate_model_simple(pred, truth, is_one_hot=True, return_dict=True):
+def evaluate_model_simple(pred, truth, is_one_hot=True, return_dict=True, *args, **kwargs):
     """
     Evaluate the prediction results of a model with 7 different metrics
     Metrics:
