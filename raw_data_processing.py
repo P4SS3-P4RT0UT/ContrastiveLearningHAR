@@ -3,6 +3,8 @@ import re
 import os
 import pandas as pd
 import numpy as np
+from multiprocessing import Pool
+from functools import partial
 
 __author__ = "C. I. Tang"
 __copyright__ = "Copyright (C) 2020 C. I. Tang"
@@ -155,40 +157,51 @@ def process_uci_har_accelerometer_files(accelerometer_data_folder_path):
     return user_datasets
     
     return user_datasets
+
+def process_single_file(file_path, label_map):
+    """Process a single participant file"""
+
+    filename = os.path.split(file_path)[-1]
+    user_id_match = re.search(r'P(?P<user_id>[0-9]{3})\.csv\.gz', filename)
     
+    if user_id_match is None:
+        return None
+        
+    user_id = int(user_id_match.group('user_id'))
+    print(f"Processing {file_path}")
+    
+    df = pd.read_csv(file_path, compression='gzip', engine='pyarrow', dtype={4: str}, usecols=['time', 'x', 'y', 'z', 'annotation'])
+    df = df.dropna(how="any")
+    
+    df['annotation'] = df['annotation'].map(label_map)
+    df = df.dropna(subset=['annotation'])
+    
+    df = df.sort_values('time').reset_index(drop=True)
+    
+    values = df[["x", "y", "z"]].values
+    labels = df['annotation'].values
+    
+    return (user_id, values, labels)
 
-def process_capture24_accelerometer_files(accelerometer_data_folder_path):
-
+def process_capture24_accelerometer_files(accelerometer_data_folder_path, n_workers=8):
     mapping_df = pd.read_csv(os.path.join(accelerometer_data_folder_path, 'annotation-label-dictionary.csv'))
     label_map = mapping_df.set_index('annotation')['label:Walmsley2020'].to_dict()
-
+    
+    all_files = sorted(glob.glob(os.path.join(accelerometer_data_folder_path, "P*.csv.gz")))
+    
+    # Parallel processing
+    process_func = partial(process_single_file, label_map=label_map)
+    
+    with Pool(processes=n_workers) as pool:
+        results = pool.map(process_func, all_files)
+    
+    # Aggregate results
     user_datasets = {}
-    all_files = sorted(glob.glob(accelerometer_data_folder_path + "/*"))
-
-    for file_path in all_files:
-        filename = os.path.split(file_path)[-1]
-
-        user_id_match = re.search(r'P(?P<user_id>[0-9]{3})\.csv\.gz', filename)
-
-        if user_id_match is not None:
-                
-            user_id = int(user_id_match.group('user_id'))
-            print(file_path)
-
-            df = pd.read_csv(file_path, compression='gzip', engine='pyarrow',dtype={4: str})
-            df.dropna(how="any", inplace=True)
-
-            df['annotation'] = df['annotation'].map(label_map)
-            df.dropna(subset=['annotation'], inplace=True)
-
-            df = df.sort_values('time').reset_index(drop=True)
-
-            values = df[["x", "y", "z"]].values
-            labels = df['annotation'].values
-
+    for result in results:
+        if result is not None:
+            user_id, values, labels = result
             if user_id not in user_datasets:
                 user_datasets[user_id] = []
-
             user_datasets[user_id].append((values, labels))
-
+    
     return user_datasets

@@ -124,10 +124,6 @@ train_users, test_users = get_fixed_split_users(har_users)
 print(f'Testing: {test_users}, Training: {train_users}')
 
 # %%
-from importlib import reload
-reload(data_pre_processing)
-
-# %%
 np_train, np_val, np_test = data_pre_processing.pre_process_dataset_composite(
     user_datasets=user_datasets, 
     label_map=label_map, 
@@ -147,8 +143,8 @@ print(np_train[0].shape)
 # ## SimCLR Training
 
 # %%
-batch_size = 512
-decay_steps = 1000
+batch_size = 1024
+decay_steps = 500
 epochs = 200
 temperature = 0.1
 transform_funcs = [
@@ -179,7 +175,7 @@ start_time = datetime.datetime.now()
 start_time_str = start_time.strftime("%Y%m%d-%H%M%S")
 tf.keras.backend.set_floatx('float32')
 
-lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
+lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.2, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
