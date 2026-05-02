@@ -457,5 +457,5 @@ simclr_utitlities.plot_sincnet_filter_response(
 simclr_utitlities.plot_sincnet_filter_scatter(
     model=base_model,
     fs=sampling_rate,
-    sincconv_layer_names=["sincconv"],
+    layer_name="sincconv",
 )
