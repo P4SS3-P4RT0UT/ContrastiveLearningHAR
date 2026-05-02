@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 __author__ = "C. I. Tang"
 __copyright__ = "Copyright (C) 2020 C. I. Tang"
@@ -73,6 +74,82 @@ def create_base_model(input_shape, model_name="base_model"):
 
     return tf.keras.Model(inputs, x, name=model_name)
 
+def create_sincnet_base_model(
+    input_shape,
+    model_name: str = "sincnet_base_model",
+    num_sinc_filters: int = 32,
+    sinc_kernel_size: int = 25,
+    sample_rate: float = 50.0,
+    depthwise: bool = True,
+):
+    """
+    Base encoder for SimCLR on MotionSense, with a SincNet frontend.
+
+    Architecture
+    ------------
+    Input  (window_size, num_channels)
+        -> SincConv1D "sincconv"
+           depthwise=True:  (window_size, num_channels * num_sinc_filters)
+           depthwise=False: (window_size, num_sinc_filters)
+        -> BatchNormalization
+        -> LeakyReLU
+        -> Conv1D: 64 filters, kernel 16, ReLU, L2
+        -> Dropout 10%
+        -> Conv1D: 96 filters, kernel  8, ReLU, L2
+        -> Dropout 10%
+        -> GlobalMaxPool1D
+
+    Parameters
+    ----------
+    input_shape : tuple
+        (window_size, num_channels), e.g. (400, 3) for MotionSense acc-only.
+    model_name : str
+    num_sinc_filters : int
+        Filters per channel (depthwise=True) or total filters (depthwise=False).
+    sinc_kernel_size : int
+        FIR filter length.  25 samples at 50 Hz ~ 0.5 s.
+    sample_rate : float
+        Acquisition frequency in Hz.
+    depthwise : bool
+        Passed through to SincConv1D.
+
+    Returns
+    -------
+    model : tf.keras.Model
+    """
+    inputs = tf.keras.Input(shape=input_shape, name="input")
+
+    x = SincConv1D(
+        num_filters=num_sinc_filters,
+        kernel_size=sinc_kernel_size,
+        sample_rate=sample_rate,
+        depthwise=depthwise,
+        name="sincconv",
+    )(inputs)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.LeakyReLU()(x)
+
+    x = tf.keras.layers.Conv1D(
+        64, 16,
+        activation="relu",
+        kernel_regularizer=tf.keras.regularizers.l2(1e-4),
+    )(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+
+    x = tf.keras.layers.Conv1D(
+        96, 8,
+        activation="relu",
+        kernel_regularizer=tf.keras.regularizers.l2(1e-4),
+    )(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+
+    x = tf.keras.layers.GlobalMaxPool1D(
+        data_format="channels_last", name="global_max_pooling1d"
+    )(x)
+
+    return tf.keras.Model(inputs, x, name=model_name)
+
+
 def attach_simclr_head(base_model, hidden_1=256, hidden_2=128, hidden_3=50):
     """
     Attach a 3-layer fully-connected encoding head
@@ -85,7 +162,7 @@ def attach_simclr_head(base_model, hidden_1=256, hidden_2=128, hidden_3=50):
         -> ReLU
         -> Dense: hidden_3 units
     """
-
+    
     input = base_model.input
     x = base_model.output
 
@@ -221,3 +298,201 @@ def extract_intermediate_model_from_base_model(base_model, intermediate_layer=7)
     model = tf.keras.Model(inputs=base_model.inputs, outputs=base_model.layers[intermediate_layer].output, name=base_model.name + "_layer_" + str(intermediate_layer))
     return model
 
+
+
+
+
+@tf.keras.utils.register_keras_serializable(package="simclr_models")
+class SincConv1D(tf.keras.layers.Layer):
+    """
+    Learnable sinc-based bandpass filter bank for multi-channel time series.
+
+    Each filter is defined by two learnable parameters (lower cutoff f1 and
+    bandwidth b), enforcing a bandpass shape:
+        h[n] = 2*f2*sinc(2*f2*n) - 2*f1*sinc(2*f1*n),  f2 = f1 + |b|
+
+    Two modes are supported via the `depthwise` argument:
+
+    depthwise=True  (default)
+        One independent filter bank per input channel.  Each channel is
+        filtered separately and the outputs are concatenated along the
+        feature axis.
+        Input  (batch, time, C)  ->  output  (batch, time, C * num_filters)
+
+    depthwise=False
+        A single shared filter bank applied across all channels jointly.
+        Input  (batch, time, C)  ->  output  (batch, time, num_filters)
+
+    In both modes the layer is named "sincconv" in the model graph, so
+    plot_sincnet_filter_response always uses sincconv_layer_names=["sincconv"].
+    Switching between modes is a single argument change; no other code changes.
+
+    Reference
+    ---------
+    Ravanelli, M., & Bengio, Y. (2018).
+        Speaker Recognition from raw waveform with SincNet.
+        https://arxiv.org/abs/1808.00158
+
+    Parameters
+    ----------
+    num_filters : int
+        Filters per channel (depthwise=True) or total filters (depthwise=False).
+    kernel_size : int
+        FIR filter length (forced odd for linear-phase symmetry).
+    sample_rate : float
+        Sampling frequency in Hz (50.0 for MotionSense).
+    min_low_hz : float
+        Hard lower bound on f1 (Hz).
+    min_band_hz : float
+        Hard lower bound on bandwidth (Hz), ensuring f2 > f1.
+    depthwise : bool
+        If True (default), one filter bank per input channel.
+        If False, one shared filter bank across all channels.
+    """
+
+    def __init__(
+        self,
+        num_filters: int,
+        kernel_size: int,
+        sample_rate: float = 50.0,
+        min_low_hz: float = 0.1,
+        min_band_hz: float = 0.5,
+        depthwise: bool = True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.kernel_size = kernel_size if kernel_size % 2 != 0 else kernel_size + 1
+        self.num_filters = num_filters
+        self.sample_rate = sample_rate
+        self.min_low_hz  = min_low_hz
+        self.min_band_hz = min_band_hz
+        self.depthwise   = depthwise
+
+    def build(self, input_shape):
+        num_channels = int(input_shape[-1])
+        self._num_channels = num_channels
+
+        nyquist   = self.sample_rate / 2.0
+        hz_points = np.linspace(
+            self.min_low_hz,
+            nyquist - (self.min_low_hz + self.min_band_hz),
+            self.num_filters + 1,
+        )
+        f1_init   = (hz_points[:-1] / nyquist).astype(np.float32)
+        band_init = ((hz_points[1:] - hz_points[:-1]) / nyquist).astype(np.float32)
+
+        if self.depthwise:
+            # Shape (num_channels, num_filters): independent bank per channel
+            self.f1_   = self.add_weight(
+                name="f1",
+                shape=(num_channels, self.num_filters),
+                initializer=tf.constant_initializer(
+                    np.tile(f1_init, (num_channels, 1))
+                ),
+                trainable=True,
+            )
+            self.band_ = self.add_weight(
+                name="band",
+                shape=(num_channels, self.num_filters),
+                initializer=tf.constant_initializer(
+                    np.tile(band_init, (num_channels, 1))
+                ),
+                trainable=True,
+            )
+        else:
+            # Shape (num_filters,): single shared bank
+            self.f1_   = self.add_weight(
+                name="f1",
+                shape=(self.num_filters,),
+                initializer=tf.constant_initializer(f1_init),
+                trainable=True,
+            )
+            self.band_ = self.add_weight(
+                name="band",
+                shape=(self.num_filters,),
+                initializer=tf.constant_initializer(band_init),
+                trainable=True,
+            )
+
+        half = (self.kernel_size - 1) // 2
+        self.n_      = tf.cast(tf.range(-half, half + 1), tf.float32)
+        self.window_ = tf.signal.hamming_window(self.kernel_size, periodic=False)
+
+        super().build(input_shape)
+
+    def _make_filters(self, f1_norm, band_norm):
+        """
+        Build normalised windowed-sinc filters.
+
+        Parameters
+        ----------
+        f1_norm, band_norm : tf.Tensor  shape (num_filters,)
+            Normalised (fraction of Nyquist) cutoff parameters.
+
+        Returns
+        -------
+        tf.Tensor  shape (kernel_size, 1, num_filters)
+        """
+        nyquist  = self.sample_rate / 2.0
+        min_low  = self.min_low_hz  / nyquist
+        min_band = self.min_band_hz / nyquist
+
+        f1 = tf.abs(f1_norm)   + min_low
+        f2 = tf.clip_by_value(f1 + tf.abs(band_norm) + min_band, 0.0, 1.0)
+
+        n  = tf.reshape(self.n_, (-1, 1))   # (kernel_size, 1)
+        f1 = tf.reshape(f1,      ( 1, -1))  # (1, num_filters)
+        f2 = tf.reshape(f2,      ( 1, -1))
+
+        def sinc(x):
+            px = np.pi * x
+            is_zero = tf.cast(tf.abs(x) < 1e-7, tf.float32)
+            return tf.math.divide_no_nan(tf.sin(px), px) + is_zero
+
+        bp  = 2.0*f2*sinc(2.0*f2*n) - 2.0*f1*sinc(2.0*f1*n)
+        bp  = bp * tf.reshape(self.window_, (-1, 1))
+        bp  = bp / (tf.reduce_sum(tf.abs(bp), axis=0, keepdims=True) + 1e-8)
+
+        return tf.reshape(bp, (self.kernel_size, 1, self.num_filters))
+
+    def call(self, inputs):
+        """
+        Parameters
+        ----------
+        inputs : tf.Tensor  shape (batch, time, channels)
+
+        Returns
+        -------
+        depthwise=True  : tf.Tensor  (batch, time, channels * num_filters)
+        depthwise=False : tf.Tensor  (batch, time, num_filters)
+        """
+        if self.depthwise:
+            # self.f1_ / self.band_ : (num_channels, num_filters)
+            # Apply per-channel filter bank inside call() — valid on both
+            # eager tensors and Keras symbolic tensors (KerasTensor).
+            channel_outputs = []
+            for ch in range(self._num_channels):
+                filters  = self._make_filters(self.f1_[ch], self.band_[ch])
+                ch_input = tf.expand_dims(inputs[..., ch], axis=-1)
+                channel_outputs.append(
+                    tf.nn.conv1d(ch_input, filters, stride=1, padding="SAME")
+                )
+            return tf.concat(channel_outputs, axis=-1)
+        else:
+            # self.f1_ / self.band_ : (num_filters,)
+            # Tile filters across channels for a standard grouped convolution.
+            filters = self._make_filters(self.f1_, self.band_)
+            filters_tiled = tf.tile(filters, [1, self._num_channels, 1])
+            return tf.nn.conv1d(inputs, filters_tiled, stride=1, padding="SAME")
+
+    def get_config(self):
+        cfg = super().get_config()
+        cfg.update(
+            num_filters=self.num_filters,
+            kernel_size=self.kernel_size,
+            sample_rate=self.sample_rate,
+            min_low_hz=self.min_low_hz,
+            min_band_hz=self.min_band_hz,
+            depthwise=self.depthwise,
+        )
+        return cfg

@@ -1,6 +1,9 @@
 import numpy as np
 import tensorflow as tf
 import sklearn.metrics
+import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter1d
+
 
 import data_pre_processing
 
@@ -243,7 +246,7 @@ def simclr_train_model(model, dataset, optimizer, batch_size, transformation_fun
         
         if verbose > 0:
             print("epoch: {} loss: {:.3f}".format(epoch + 1, np.mean(step_wise_loss)))
-
+        
     return model, epoch_wise_loss
 
 
@@ -369,3 +372,203 @@ def NT_Xent_loss(hidden_features_transform_1, hidden_features_transform_2, norma
     loss = loss_a + loss_b
 
     return loss
+
+def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
+                                 smooth_sigma=10):
+    """
+    Plot the cumulative frequency response of learned SincNet filters,
+    reproducing Fig. 3 from Ravanelli & Bengio (2018).
+
+    Compatible with both depthwise=True and depthwise=False modes of SincConv1D:
+
+    depthwise=True   f1_ / band_ shape: (num_channels, num_filters)
+                     Curves are plotted per channel (one colour each).
+    depthwise=False  f1_ / band_ shape: (num_filters,)
+                     A single curve is plotted.
+
+    Parameters
+    ----------
+    model                : tf.keras.Model
+    fs                   : int    — sample rate in Hz
+    sincconv_layer_names : list[str] — layer names to plot,
+                           always ["sincconv"] regardless of depthwise mode
+    n_freqs              : int    — frequency axis resolution
+    smooth_sigma         : float  — Gaussian smoothing sigma (0 to disable)
+    """
+    freqs   = np.linspace(0, fs / 2, n_freqs)
+    nyquist = fs / 2.0
+    colors  = ['red', 'blue', 'green', 'orange', 'purple']
+
+    plt.figure(figsize=(10, 5))
+
+    for idx, layer_name in enumerate(sincconv_layer_names):
+        layer = model.get_layer(layer_name)
+
+        # f1_ and band_ are normalised (fraction of Nyquist).
+        # Recover effective Hz cutoffs mirroring the constraint in call():
+        #   f1  = min_low_hz/nyquist  + |f1_|
+        #   f2  = clip(f1 + min_band_hz/nyquist + |band_|, 0, 1)
+        f1_raw   = layer.f1_.numpy()     # (num_filters,) or (num_channels, num_filters)
+        band_raw = layer.band_.numpy()
+
+        if f1_raw.ndim == 2:
+            # depthwise=True: iterate over channels
+            num_channels = f1_raw.shape[0]
+            for ch in range(num_channels):
+                f1_norm  = layer.min_low_hz  / nyquist + np.abs(f1_raw[ch])
+                f2_norm  = np.clip(
+                    f1_norm + layer.min_band_hz / nyquist + np.abs(band_raw[ch]),
+                    0.0, 1.0,
+                )
+                low_hz  = (f1_norm * nyquist).reshape(-1, 1)
+                high_hz = (f2_norm * nyquist).reshape(-1, 1)
+
+                in_band    = (freqs.reshape(1, -1) >= low_hz) & (freqs.reshape(1, -1) <= high_hz)
+                cumulative = in_band.sum(axis=0).astype(float)
+                cumulative /= cumulative.max()
+                if smooth_sigma > 0:
+                    cumulative = gaussian_filter1d(cumulative, sigma=smooth_sigma)
+
+                plt.plot(freqs, cumulative,
+                         color=colors[ch % len(colors)],
+                         linestyle='-',
+                         linewidth=2,
+                         label=f"{layer_name} ch{ch}")
+        else:
+            # depthwise=False: single shared bank
+            f1_norm  = layer.min_low_hz  / nyquist + np.abs(f1_raw)
+            f2_norm  = np.clip(
+                f1_norm + layer.min_band_hz / nyquist + np.abs(band_raw),
+                0.0, 1.0,
+            )
+            low_hz  = (f1_norm * nyquist).reshape(-1, 1)
+            high_hz = (f2_norm * nyquist).reshape(-1, 1)
+
+            in_band    = (freqs.reshape(1, -1) >= low_hz) & (freqs.reshape(1, -1) <= high_hz)
+            cumulative = in_band.sum(axis=0).astype(float)
+            cumulative /= cumulative.max()
+            if smooth_sigma > 0:
+                cumulative = gaussian_filter1d(cumulative, sigma=smooth_sigma)
+
+            plt.plot(freqs, cumulative,
+                     color=colors[idx % len(colors)],
+                     linestyle='-' if idx == 0 else '--',
+                     linewidth=2,
+                     label=layer_name if len(sincconv_layer_names) > 1 else 'SincNet')
+
+    plt.xlabel('Frequency [Hz]', fontsize=13)
+    plt.ylabel('Normalized Filter Sum', fontsize=13)
+    plt.title('Cumulative frequency response of the SincNet filters', fontsize=14)
+    plt.legend(fontsize=11)
+    plt.xlim([0, fs / 2])
+    plt.ylim([0, 1.05])
+    plt.tight_layout()
+    plt.savefig('sincnet_filter_response.png', dpi=150, bbox_inches='tight')
+    plt.show()
+
+def plot_sincnet_filter_scatter(model, fs, layer_name="sincconv"):
+    """
+    Scatter plot of learned SincNet filter characteristics.
+ 
+    Each point represents one learned filter, positioned by its centre
+    frequency (fc = (f1 + f2) / 2) on the x-axis and its bandwidth
+    (f2 - f1) on the y-axis.
+ 
+    depthwise=True  : one colour per channel (red, blue, green),
+                      all channels overlaid on the same plot.
+    depthwise=False : single colour (red), one point per filter.
+ 
+    Parameters
+    ----------
+    model      : tf.keras.Model
+    fs         : float  — sample rate in Hz
+    layer_name : str    — name of the SincConv1D layer (always "sincconv")
+    """
+    layer   = model.get_layer(layer_name)
+    nyquist = fs / 2.0
+ 
+    f1_raw   = layer.f1_.numpy()    # (num_channels, num_filters) or (num_filters,)
+    band_raw = layer.band_.numpy()
+ 
+    # Recover effective Hz cutoffs, mirroring the constraint in call()
+    f1_hz = (layer.min_low_hz / nyquist + np.abs(f1_raw)) * nyquist
+    f2_hz = np.clip(
+        f1_hz + (layer.min_band_hz / nyquist + np.abs(band_raw)) * nyquist,
+        0.0, nyquist,
+    )
+    fc_hz = (f1_hz + f2_hz) / 2.0
+    bw_hz = f2_hz - f1_hz
+ 
+    fig, ax = plt.subplots(figsize=(8, 5))
+ 
+    if f1_raw.ndim == 2:
+        # depthwise=True: f1_hz / bw_hz shape (num_channels, num_filters)
+        channel_colors  = ['red', 'blue', 'green']
+        channel_labels  = [f'ch{i}' for i in range(f1_hz.shape[0])]
+        for ch, (color, label) in enumerate(zip(channel_colors, channel_labels)):
+            ax.scatter(
+                fc_hz[ch], bw_hz[ch],
+                color=color, label=label,
+                alpha=0.75, edgecolors='none', s=60,
+            )
+    else:
+        # depthwise=False: f1_hz / bw_hz shape (num_filters,)
+        ax.scatter(
+            fc_hz, bw_hz,
+            color='red', label='shared bank',
+            alpha=0.75, edgecolors='none', s=60,
+        )
+ 
+    ax.set_xlabel('Centre frequency $f_c$ [Hz]', fontsize=13)
+    ax.set_ylabel('Bandwidth [Hz]', fontsize=13)
+    ax.set_title('Learned SincNet filter characteristics', fontsize=14)
+    ax.set_xlim(0, nyquist)
+    ax.set_ylim(bottom=0)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('sincnet_filter_scatter.png', dpi=150, bbox_inches='tight')
+    plt.show()
+
+def print_layer_indices(model):
+    """
+    Print a numbered table of every layer in a model.
+
+    Recommended choices for the SincNet + TPN encoder with default settings
+    (3-channel input, num_sinc_filters=32, sinc_kernel_size=25):
+
+        intermediate_layer
+            The layer whose output is used as the feature vector for
+            linear evaluation and fine-tuning.  A good default is the
+            GlobalMaxPool1D output of the base encoder (the last layer
+            before the projection head), so that downstream tasks use the
+            full representation rather than a mid-projection embedding.
+
+        last_freeze_layer  (fine-tuning only)
+            Freeze through the SincNet frontend and BN/activation, leaving
+            the Conv1D blocks and projection head trainable.  A reasonable
+            default is the LeakyReLU that follows the first BatchNorm, i.e.
+            just after the sinc filters.  This lets the network adapt its
+            temporal feature detectors while preserving the learned
+            frequency decomposition.
+
+    Example
+    -------
+        base  = create_sincnet_base_model(input_shape=(200, 3))
+        model = attach_simclr_head(base)
+        print_layer_indices(model)
+
+    Parameters
+    ----------
+    model : tf.keras.Model
+    """
+    print(f"\nLayer indices for model '{model.name}':")
+    print(f"  {'idx':>4}  {'type':<28}  {'name':<40}  output shape")
+    print("  " + "-" * 95)
+    for i, layer in enumerate(model.layers):
+        try:
+            shape = str(layer.output_shape)
+        except AttributeError:
+            shape = "?"
+        print(f"  {i:>4}  {type(layer).__name__:<28}  {layer.name:<40}  {shape}")
+    print()
