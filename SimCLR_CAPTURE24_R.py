@@ -98,7 +98,7 @@ label_list = ['null', 'sleep', 'sedentary', 'light', 'moderate-vigorous']
 label_list_full_name = ['null', 'sleep', 'sedentary', 'light', 'moderate-vigorous']
 has_null_class = True
 
-label_map = dict([(i, i) for i in range(len(label_list))])
+label_map = {name: i for i, name in enumerate(label_list)}
 
 output_shape = len(label_list)
 

@@ -175,7 +175,7 @@ def process_capture24_accelerometer_files(accelerometer_data_folder_path):
             user_id = int(user_id_match.group('user_id'))
             print(file_path)
 
-            df = pd.read_csv(file_path, compression='gzip', engine='pyarrow', dtype={4: str})
+            df = pd.read_csv(file_path, compression='gzip', engine='pyarrow',dtype={4: str})
             df.dropna(how="any", inplace=True)
 
             df['annotation'] = df['annotation'].map(label_map)

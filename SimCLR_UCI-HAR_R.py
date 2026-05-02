@@ -135,7 +135,11 @@ np_train, np_val, np_test = data_pre_processing.pre_process_dataset_composite(
     train_users=train_users, 
     test_users=test_users, 
     window_size=window_size, 
+<<<<<<< HEAD
     shift=window_size, 
+=======
+    shift=window_size//2, 
+>>>>>>> 5ad7ddd (whatever)
     normalise_dataset=True, 
     verbose=1
 )
