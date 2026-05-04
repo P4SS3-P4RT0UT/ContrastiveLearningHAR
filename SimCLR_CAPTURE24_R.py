@@ -34,6 +34,8 @@ import simclr_models
 import simclr_utitlities
 import transformations
 
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
 # %%
 working_directory = 'capture24_run/'
 dataset_save_path = working_directory
@@ -69,8 +71,6 @@ with zipfile.ZipFile(working_directory + 'capture24.zip', 'r') as zip_ref:
 # Here we split it into training, validation and testing sets. 
 
 # %%
-from importlib import reload
-reload(raw_data_processing)
 
 # %%
 accelerometer_data_folder_path = working_directory + 'capture24/'
@@ -131,7 +131,7 @@ np_train, np_val, np_test = data_pre_processing.pre_process_dataset_composite(
     train_users=train_users, 
     test_users=test_users, 
     window_size=window_size, 
-    shift=window_size//2, 
+    shift=int(window_size*0.9), 
     normalise_dataset=True, 
     verbose=1
 )
