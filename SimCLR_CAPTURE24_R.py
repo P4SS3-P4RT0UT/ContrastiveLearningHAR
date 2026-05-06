@@ -131,7 +131,7 @@ np_train, np_val, np_test = data_pre_processing.pre_process_dataset_composite(
     train_users=train_users, 
     test_users=test_users, 
     window_size=window_size, 
-    shift=int(window_size*0.9), 
+    shift=window_size, 
     normalise_dataset=True, 
     verbose=1
 )
@@ -143,10 +143,10 @@ print(np_train[0].shape)
 # ## SimCLR Training
 
 # %%
-batch_size = 4094
-decay_steps = 50000
-epochs = 200
-temperature = 0.1
+batch_size = 2048
+decay_steps = 100000
+epochs = 400
+temperature = 0.2
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
     transformations.rotation_transform_vectorized # Use rotation trasnformation
@@ -175,7 +175,7 @@ start_time = datetime.datetime.now()
 start_time_str = start_time.strftime("%Y%m%d-%H%M%S")
 tf.keras.backend.set_floatx('float32')
 
-lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.8, decay_steps=decay_steps)
+lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
