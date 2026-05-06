@@ -50,7 +50,7 @@ def create_base_model(input_shape, model_name="base_model"):
     inputs = tf.keras.Input(shape=input_shape, name='input')
     x = inputs
     x = tf.keras.layers.Conv1D(
-            32, 24,
+            96, 100,
             activation='relu',
             kernel_regularizer=tf.keras.regularizers.l2(1e-4)
         )(x)
