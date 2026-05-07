@@ -144,9 +144,9 @@ print(np_train[0].shape)
 
 # %%
 batch_size = 2048
-epochs = 300
+epochs = 200
 decay_steps = 100000
-temperature = 0.5
+temperature = 0.1
 
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
