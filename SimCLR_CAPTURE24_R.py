@@ -143,9 +143,9 @@ print(np_train[0].shape)
 # ## SimCLR Training
 
 # %%
-batch_size = 2048
-epochs = 200
-decay_steps = 100000
+batch_size = 4096
+epochs = 250
+decay_steps = 200000
 temperature = 0.1
 
 transform_funcs = [
@@ -194,7 +194,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.show()
+plt.savefig('epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -319,6 +319,9 @@ legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
+
 # %% [markdown]
 # ### Custom Color maps (Optional)
 # 
@@ -361,8 +364,10 @@ plt.yticks([], [])
 plt.legend(loc='lower left', bbox_to_anchor=(0.25, -0.3), ncol=2)
 legend = graph.legend_
 for j, label in enumerate(unique_labels):
-    legend.get_texts()[j].set_text(label_list_full_name[label]) 
+    legend.get_texts()[j].set_text(label_list_full_name[label])
 
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 # %%
 

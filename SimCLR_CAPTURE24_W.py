@@ -145,7 +145,7 @@ print(np_train[0].shape)
 # %%
 batch_size = 2048
 epochs = 200
-decay_steps = 100000
+decay_steps = 150000
 temperature = 0.1
 
 transform_funcs = [
@@ -176,7 +176,7 @@ start_time = datetime.datetime.now()
 start_time_str = start_time.strftime("%Y%m%d-%H%M%S")
 tf.keras.backend.set_floatx('float32')
 
-lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.3, decay_steps=decay_steps)
+lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
@@ -194,7 +194,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.show()
+plt.savefig('epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -319,6 +319,8 @@ legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
 # %% [markdown]
 # ### Custom Color maps (Optional)
 # 
@@ -363,6 +365,8 @@ legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
+plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
+plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
 
 # %%
 
