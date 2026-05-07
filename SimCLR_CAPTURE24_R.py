@@ -148,7 +148,7 @@ batch_size = 2048
 steps_per_epoch = np_train[0].shape[0] // batch_size
 warmup_steps = 10 * steps_per_epoch
 
-epochs = 400
+epochs = 200
 
 total_steps = epochs * steps_per_epoch
 decay_steps = total_steps - warmup_steps
@@ -189,7 +189,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(
      warmup_target=0.1,
      warmup_steps=warmup_steps
      )
-optimizer = tf.keras.optimizers.SGD(lr_decayed_fn, momentum=0.9)
+optimizer = tf.keras.optimizers.SGD(lr_decayed_fn, momentum=0.0)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
 base_model = simclr_models.create_base_model(input_shape, model_name="base_model")
