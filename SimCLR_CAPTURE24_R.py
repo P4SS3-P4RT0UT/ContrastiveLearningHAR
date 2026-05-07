@@ -144,16 +144,9 @@ print(np_train[0].shape)
 
 # %%
 batch_size = 2048
-
-steps_per_epoch = np_train[0].shape[0] // batch_size
-warmup_steps = 10 * steps_per_epoch
-
-epochs = 200
-
-total_steps = epochs * steps_per_epoch
-decay_steps = total_steps - warmup_steps
-
-temperature = 0.3
+epochs = 300
+decay_steps = 100000
+temperature = 0.5
 
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
@@ -183,13 +176,8 @@ start_time = datetime.datetime.now()
 start_time_str = start_time.strftime("%Y%m%d-%H%M%S")
 tf.keras.backend.set_floatx('float32')
 
-lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(
-     initial_learning_rate=0.0, 
-     decay_steps=decay_steps,
-     warmup_target=0.1,
-     warmup_steps=warmup_steps
-     )
-optimizer = tf.keras.optimizers.SGD(lr_decayed_fn, momentum=0.0)
+lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
+optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
 base_model = simclr_models.create_base_model(input_shape, model_name="base_model")
