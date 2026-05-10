@@ -144,9 +144,10 @@ print(np_train[0].shape)
 
 # %%
 batch_size = 2048
-epochs = 200
-decay_steps = 150000
-temperature = 0.1
+decay_steps = 100000
+
+epochs = 400
+temperature = 0.5
 
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
@@ -194,7 +195,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.savefig('epoch_losses.png')
+plt.savefig(f'epoch_losses_{start_time_str}.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -320,7 +321,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
+plt.savefig(f'tsne_plot_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 # %% [markdown]
 # ### Custom Color maps (Optional)
 # 
@@ -366,7 +367,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
+plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 
 # %%
 
