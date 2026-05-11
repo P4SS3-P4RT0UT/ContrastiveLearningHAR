@@ -209,7 +209,7 @@ temperature = 0.1
 transform_funcs = [
     #transformations.noise_transform_vectorized,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    transformations.noise_transform_vectorized # Use noise trasnformation
+    transformations.resampling_fast_random # Use noise trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
@@ -238,7 +238,7 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=16, sinc_kernel_size=100, sample_rate=sampling_rate, depthwise=True)
+base_model = simclr_models.create_base_model(input_shape, model_name="base_model")
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
@@ -269,7 +269,7 @@ batch_size = 200
 tag = "linear_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=8)
+linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=7)
 
 linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
@@ -312,7 +312,7 @@ batch_size = 200
 tag = "full_eval"
 
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
-full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=8, last_freeze_layer=5)
+full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=7, last_freeze_layer=4)
 
 full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
@@ -360,7 +360,7 @@ perplexity = 30.0
 # ### t-SNE Representations
 
 # %%
-intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=8)
+intermediate_model = simclr_models.extract_intermediate_model_from_base_model(target_model, intermediate_layer=7)
 intermediate_model.summary()
 
 embeddings = intermediate_model.predict(np_test[0], batch_size=600)
@@ -444,17 +444,3 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
 plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
-
-
-simclr_utitlities.plot_sincnet_filter_response(
-    model=base_model,
-    fs=sampling_rate,
-    sincconv_layer_names=["sincconv"],
-    smooth_sigma=10,
-)
-
-simclr_utitlities.plot_sincnet_filter_scatter(
-    model=base_model,
-    fs=sampling_rate,
-    layer_name="sincconv",
-)

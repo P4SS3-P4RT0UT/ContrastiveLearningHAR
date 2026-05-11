@@ -373,7 +373,7 @@ def NT_Xent_loss(hidden_features_transform_1, hidden_features_transform_2, norma
 
     return loss
 
-def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
+def plot_sincnet_filter_response(model, fs, sincconv_layer_names, start_time, n_freqs=1000,
                                  smooth_sigma=10):
     """
     Plot the cumulative frequency response of learned SincNet filters,
@@ -458,15 +458,15 @@ def plot_sincnet_filter_response(model, fs, sincconv_layer_names, n_freqs=1000,
 
     plt.xlabel('Frequency [Hz]', fontsize=13)
     plt.ylabel('Normalized Filter Sum', fontsize=13)
-    plt.title('Cumulative frequency response of the SincNet filters', fontsize=14)
+    plt.title('Cumulative Frequency Response of the SincNet Filters', fontsize=14)
     plt.legend(fontsize=11)
     plt.xlim([0, fs / 2])
     plt.ylim([0, 1.05])
     plt.tight_layout()
-    plt.savefig('sincnet_filter_response.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'sincnet_filter_response_{start_time}.png', dpi=150, bbox_inches='tight')
     plt.show()
 
-def plot_sincnet_filter_scatter(model, fs, layer_name="sincconv"):
+def plot_sincnet_filter_scatter(model, fs, start_time, layer_name="sincconv"):
     """
     Scatter plot of learned SincNet filter characteristics.
  
@@ -519,15 +519,15 @@ def plot_sincnet_filter_scatter(model, fs, layer_name="sincconv"):
             alpha=0.75, edgecolors='none', s=60,
         )
  
-    ax.set_xlabel('Centre frequency $f_c$ [Hz]', fontsize=13)
+    ax.set_xlabel('Centre Frequency $f_c$ [Hz]', fontsize=13)
     ax.set_ylabel('Bandwidth [Hz]', fontsize=13)
-    ax.set_title('Learned SincNet filter characteristics', fontsize=14)
+    ax.set_title('Learned SincNet Filter Characteristics', fontsize=14)
     ax.set_xlim(0, nyquist)
     ax.set_ylim(bottom=0)
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('sincnet_filter_scatter.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'sincnet_filter_scatter_{start_time}.png', dpi=150, bbox_inches='tight')
     plt.show()
 
 def print_layer_indices(model):

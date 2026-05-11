@@ -209,7 +209,7 @@ temperature = 0.1
 transform_funcs = [
     #transformations.noise_transform_vectorized,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    transformations.noise_transform_vectorized # Use noise trasnformation
+    transformations.resampling_fast_random # Use noise trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
@@ -300,7 +300,7 @@ plt.plot(training_history.history['val_loss'], label='Validation loss', linestyl
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
-plt.savefig('loss_linear_eval.png')
+plt.savefig(f'loss_linear_eval_{start_time_str}.png')
 
 # %% [markdown]
 # ### Full HAR Model
@@ -343,7 +343,7 @@ plt.plot(training_history.history['val_loss'], label='Validation loss', linestyl
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
-plt.savefig('loss_full_eval.png')
+plt.savefig(f'loss_full_eval_{start_time_str}.png')
 
 # %% [markdown]
 # ## Extra: t-SNE Plots
@@ -402,7 +402,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
+plt.savefig(f'tsne_plot_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 
 
 
@@ -443,12 +443,13 @@ legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
+plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 
 
 simclr_utitlities.plot_sincnet_filter_response(
     model=base_model,
     fs=sampling_rate,
+    start_time=start_time_str,
     sincconv_layer_names=["sincconv"],
     smooth_sigma=10,
 )
@@ -456,5 +457,6 @@ simclr_utitlities.plot_sincnet_filter_response(
 simclr_utitlities.plot_sincnet_filter_scatter(
     model=base_model,
     fs=sampling_rate,
+    start_time=start_time_str,
     layer_name="sincconv",
 )
