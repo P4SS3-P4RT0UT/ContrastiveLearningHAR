@@ -209,7 +209,7 @@ temperature = 0.1
 transform_funcs = [
     #transformations.noise_transform_vectorized,
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    transformations.resampling_fast_random # Use noise trasnformation
+    transformations.rotation_transform_vectorized # Use noise trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
