@@ -240,7 +240,7 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_sincnet_base_model(input_shape=input_shape, output_shape=output_shape, model_name="SincNet", num_sinc_filters=16, sinc_kernel_size=100, sample_rate=sampling_rate, depthwise=True)  
+base_model = simclr_models.create_sincnet_base_model(input_shape=input_shape, model_name="SincNet", num_sinc_filters=16, sinc_kernel_size=100, sample_rate=sampling_rate, depthwise=True)  
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
