@@ -147,7 +147,7 @@ batch_size = 2048
 decay_steps = 100000
 
 epochs = 400
-temperature = 0.2
+temperature = 0.07
 
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
@@ -177,7 +177,7 @@ start_time = datetime.datetime.now()
 start_time_str = start_time.strftime("%Y%m%d-%H%M%S")
 tf.keras.backend.set_floatx('float32')
 
-lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
+lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.4, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
