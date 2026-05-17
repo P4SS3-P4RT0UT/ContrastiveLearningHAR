@@ -572,3 +572,129 @@ def print_layer_indices(model):
             shape = "?"
         print(f"  {i:>4}  {type(layer).__name__:<28}  {layer.name:<40}  {shape}")
     print()
+
+def plot_separated_batch_with_sincnet(X_test, Y_test, label_list, aug_fn, target_label='jog',
+                                       num_augs=40, sample_rate=50.0, batch_size=5, 
+                                       min_low_hz=0.1, min_band_hz=0.5,
+                                       sincconv_layer_name="sincconv", smooth_sigma=10.0):
+    """
+    Plots side-by-side batch stats (Original vs. Augmented) and overlays the 
+    SincNet learned filters (one channel per accelerometer axis) as a background fill.
+    """
+    if hasattr(X_test, 'numpy'): X_test = X_test.numpy()
+    if hasattr(Y_test, 'numpy'): Y_test = Y_test.numpy()
+        
+    labels = np.argmax(Y_test, axis=1)
+    nyquist = sample_rate / 2.0
+    fft_freqs = np.fft.rfftfreq(X_test.shape[1], d=1.0/sample_rate)
+    
+    # Map label list to lower case indices dynamically
+    label_map = {name.lower(): idx for idx, name in enumerate(label_list)}
+    target_label_lower = target_label.lower()
+    
+    if target_label_lower not in label_map:
+        print(f"Error: '{target_label}' not found in your label list.")
+        return
+    target_idx = label_map[target_label_lower]
+    
+    # Filter dataset for selected class
+    target_samples = X_test[labels == target_idx]
+    if len(target_samples) < batch_size:
+        batch_size = len(target_samples)
+    X_batch = np.array(target_samples[:batch_size], dtype=np.float64)
+
+    # --- 1. Pre-compute SincNet Filter Profiles ---
+    sinc_layer = sinc_model.get_layer(sincconv_layer_name)
+    f1_raw   = sinc_layer.f1_.numpy()   # Shape: (Channels, Filters)
+    band_raw = sinc_layer.band_.numpy()
+
+    min_low  = min_low_hz  / nyquist
+    min_band = min_band_hz / nyquist
+    
+    sinc_freq_grid = np.linspace(0, nyquist, 1000)
+    sinc_profiles = []
+
+    for ch in range(f1_raw.shape[0]):
+        f1 = np.abs(f1_raw[ch]) + min_low
+        f2 = np.clip(f1 + np.abs(band_raw[ch]) + min_band, 0.0, 1.0)
+        f1_hz, f2_hz = f1 * nyquist, f2 * nyquist
+
+        H = np.zeros(len(sinc_freq_grid))
+        for fi in range(f1_raw.shape[1]):
+            h_rect = np.where((sinc_freq_grid >= f1_hz[fi]) & (sinc_freq_grid <= f2_hz[fi]), 1.0, 0.0)
+            H += h_rect
+            
+        if smooth_sigma > 0:
+            H = gaussian_filter1d(H, sigma=smooth_sigma)
+        H /= (H.max() + 1e-8)
+        sinc_profiles.append(H)
+
+    # --- 2. Initialize 3x2 Plot Grid ---
+    fig, axes = plt.subplots(3, 2, figsize=(14, 11), sharex=True, sharey='row')
+    axis_names = ['X', 'Y', 'Z']
+    channel_colors = ['#444444', '#666666', '#888888']
+    
+    num_freq_bins = len(fft_freqs)
+
+    for ax_i in range(3):
+        batch_base_mags = np.zeros((batch_size, num_freq_bins))
+        batch_aug_mags = np.zeros((batch_size, num_freq_bins))
+        
+        # --- 3. Compute Data Profiles ---
+        for s_idx in range(batch_size):
+            X_single = X_batch[s_idx:s_idx+1]
+            
+            base_mag = np.abs(np.fft.rfft(X_single[0, :, ax_i]))
+            norm_anchor = base_mag.max() + 1e-8
+            batch_base_mags[s_idx] = base_mag / norm_anchor
+            
+            running_sum = np.zeros(num_freq_bins)
+            for _ in range(num_augs):
+                X_transformed = aug_fn(X_single)
+                if hasattr(X_transformed, 'numpy'):
+                    X_transformed = X_transformed.numpy()
+                running_sum += np.abs(np.fft.rfft(X_transformed[0, :, ax_i]))
+            batch_aug_mags[s_idx] = (running_sum / num_augs) / norm_anchor
+
+        mean_base = batch_base_mags.mean(axis=0)
+        std_base  = batch_base_mags.std(axis=0)
+        mean_aug  = batch_aug_mags.mean(axis=0)
+        std_aug   = batch_aug_mags.std(axis=0)
+
+        # --- 4. Render Subplots (Column 0: Original | Column 1: Augmented) ---
+        for col_idx in range(2):
+            ax = axes[ax_i, col_idx]
+            
+            if ax_i < len(sinc_profiles):
+                ax.fill_between(sinc_freq_grid, 0, sinc_profiles[ax_i], 
+                                color=channel_colors[ax_i], alpha=0.15, 
+                                label=f'SincNet Ch {ax_i+1}', zorder=1)
+            
+            if col_idx == 0:  # Original Data
+                ax.plot(fft_freqs, mean_base, color='#1f77b4', lw=2.5, linestyle='-', label='Batch Mean', zorder=2)
+                ax.fill_between(fft_freqs, np.clip(mean_base - std_base, 0, None), mean_base + std_base,
+                                 color='#1f77b4', alpha=0.15, label='±1 Std Dev', zorder=2)
+                if ax_i == 0:
+                    ax.set_title("Original Data vs. Filters", fontsize=13, weight='bold', pad=12)
+            else:  # Augmented Data
+                ax.plot(fft_freqs, mean_aug, color='#d62728', lw=2.5, linestyle='-', label='Batch Mean (Aug)', zorder=2)
+                ax.fill_between(fft_freqs, np.clip(mean_aug - std_aug, 0, None), mean_aug + std_aug,
+                                  color='#d62728', alpha=0.15, label='±1 Std Dev (Aug)', zorder=2)
+                if ax_i == 0:
+                    ax.set_title(f"Augmented ({target_label.capitalize()}) vs. Filters", fontsize=13, weight='bold', pad=12)
+
+            ax.grid(True, linestyle='-', alpha=0.15, color='gray')
+            ax.set_xlim(0, nyquist)
+            ax.set_ylim(0, 1.1)
+            
+            if col_idx == 0:
+                ax.set_ylabel(f"{axis_names[ax_i]}\nRelative Magnitude", fontsize=11, weight='bold')
+            if ax_i == 0:
+                ax.legend(fontsize=8, loc='upper right', framealpha=0.9)
+
+    axes[2, 0].set_xlabel('Frequency (Hz)', fontsize=12, weight='bold')
+    axes[2, 1].set_xlabel('Frequency (Hz)', fontsize=12, weight='bold')
+    
+    plt.suptitle(f"Batch Variance under {aug_fn.__name__ if hasattr(aug_fn, '__name__') else 'Augmentation'} ({target_label.capitalize()}) with SincNet Filters", fontsize=14, weight='bold', y=0.98)
+    plt.tight_layout()
+    plt.show()
