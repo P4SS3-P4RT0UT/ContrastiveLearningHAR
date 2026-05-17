@@ -147,7 +147,7 @@ batch_size = 2048
 decay_steps = 100000
 
 epochs = 400
-temperature = 0.05
+temperature = 0.08
 
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation

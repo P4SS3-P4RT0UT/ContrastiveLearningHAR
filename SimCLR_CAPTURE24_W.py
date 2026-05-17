@@ -151,7 +151,7 @@ temperature = 0.2
 
 transform_funcs = [
     # transformations.scaling_transform_vectorized, # Use Scaling trasnformation
-    transformations.time_warp_transform_improved # Use rotation trasnformation
+    transformations.time_warp_transform_low_cost # Use rotation trasnformation
 ]
 transformation_function = simclr_utitlities.generate_composite_transform_function_simple(transform_funcs)
 
