@@ -246,7 +246,7 @@ simclr_utitlities.print_layer_indices(simclr_model)
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
-simclr_model_save_path = f"{working_directory}{start_time_str}_simclr.keras"
+simclr_model_save_path = f"{working_directory}{start_time_str}_simclr_ms_j.keras"
 trained_simclr_model.save(simclr_model_save_path)
 
 # SimCLR pre-training (NT-Xent (contrastive) loss)
