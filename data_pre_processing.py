@@ -351,7 +351,6 @@ def pre_process_dataset_composite(user_datasets, label_map, output_shape, train_
     train_y_mapped = apply_label_map(train_y, label_map)
     test_y_mapped = apply_label_map(test_y, label_map)
 
-
     train_x, train_y_mapped = filter_none_label(train_x, train_y_mapped)
     test_x, test_y_mapped = filter_none_label(test_x, test_y_mapped)
 

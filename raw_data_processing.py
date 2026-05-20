@@ -192,9 +192,8 @@ def process_capture24_accelerometer_files(accelerometer_data_folder_path, n_work
     # Parallel processing
     process_func = partial(process_single_file, label_map=label_map)
     
-    #with Pool(processes=n_workers) as pool:
-        #results = pool.map(process_func, all_files)
-    results = [process_func(f) for f in all_files]
+    with Pool(processes=n_workers) as pool:
+        results = pool.map(process_func, all_files)
     
     # Aggregate results
     user_datasets = {}
