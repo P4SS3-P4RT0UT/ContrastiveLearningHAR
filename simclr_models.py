@@ -50,7 +50,7 @@ def create_base_model(input_shape, model_name="base_model"):
     inputs = tf.keras.Input(shape=input_shape, name='input')
     x = inputs
     x = tf.keras.layers.Conv1D(
-            32, 24,
+            32, 24, # try 48 here when ready
             activation='relu',
             kernel_regularizer=tf.keras.regularizers.l2(1e-4)
         )(x)
@@ -76,11 +76,11 @@ def create_base_model(input_shape, model_name="base_model"):
 
 def create_sincnet_base_model(
     input_shape,
+    num_sinc_filters: int,
+    sinc_kernel_size: int,
+    sample_rate: float,
     model_name: str = "sincnet_base_model",
-    num_sinc_filters: int = 32,
-    sinc_kernel_size: int = 25,
-    sample_rate: float = 50.0,
-    depthwise: bool = True,
+    depthwise: bool = True
 ):
     """
     Base encoder for SimCLR on MotionSense, with a SincNet frontend.
