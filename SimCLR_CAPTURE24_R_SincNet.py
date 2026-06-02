@@ -181,7 +181,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
-base_model = simclr_models.create_sincnet_base_model(input_shape=input_shape, model_name="SincNet", num_sinc_filters=16, sinc_kernel_size=201, sample_rate=sampling_rate, depthwise=True)
+base_model = simclr_models.create_sincnet_base_model(input_shape=input_shape, model_name="SincNet", num_sinc_filters=8, sinc_kernel_size=201, sample_rate=sampling_rate, depthwise=True)
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
@@ -195,7 +195,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.savefig(f'epoch_losses_{start_time_str}.png')
+#plt.savefig(f'epoch_losses_{start_time_str}.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -321,7 +321,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
+#plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
 
 # %% [markdown]
 # ### Custom Color maps (Optional)
@@ -368,22 +368,8 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label])
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
+#plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 
 # %%
 
-simclr_utitlities.plot_sincnet_filter_response(
-    model=base_model,
-    fs=sampling_rate,
-    sincconv_layer_names=["sincconv"],
-    start_time=start_time_str,
-    smooth_sigma=10,
-)
-
-simclr_utitlities.plot_sincnet_filter_scatter(
-    model=base_model,
-    fs=sampling_rate,
-    layer_name="sincconv",
-    start_time=start_time_str
-)
 

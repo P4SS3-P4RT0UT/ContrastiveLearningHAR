@@ -181,7 +181,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
-base_model = simclr_models.create_base_model(input_shape, model_name="base_model")
+base_model = simclr_models.create_base_model(input_shape, n_filters=24, model_name="base_model")
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
@@ -195,7 +195,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.savefig(f'epoch_losses_{start_time_str}.png')
+#plt.savefig(f'epoch_losses_{start_time_str}.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -321,7 +321,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
+#plt.savefig(f'tsne_plot_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 # %% [markdown]
 # ### Custom Color maps (Optional)
 # 
@@ -367,7 +367,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
+#plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}_{start_time_str}.png', bbox_inches='tight')
 
 # %%
 

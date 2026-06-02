@@ -23,7 +23,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-def create_base_model(input_shape, model_name="base_model"):
+def create_base_model(input_shape, n_filters, model_name="base_model"):
     """
     Create the base model for activity recognition
     Reference (TPN model):
@@ -50,7 +50,7 @@ def create_base_model(input_shape, model_name="base_model"):
     inputs = tf.keras.Input(shape=input_shape, name='input')
     x = inputs
     x = tf.keras.layers.Conv1D(
-            32, 24, # try 48 here when ready
+            n_filters, 24, 
             activation='relu',
             kernel_regularizer=tf.keras.regularizers.l2(1e-4)
         )(x)

@@ -238,7 +238,7 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=16, sinc_kernel_size=101, sample_rate=sampling_rate, depthwise=True)
+base_model = simclr_models.create_base_model(input_shape, n_filters=24, model_name="base_model")
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
@@ -254,7 +254,7 @@ plt.figure(figsize=(12,8))
 plt.plot(epoch_losses)
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
-plt.savefig('pretraining_epoch_losses.png')
+#plt.savefig('pretraining_epoch_losses.png')
 
 # %% [markdown]
 # ## Fine-tuning and Evaluation
@@ -294,14 +294,6 @@ print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_
 print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 
-plt.figure(figsize=(12,8))
-plt.plot(training_history.history['loss'], label='Training loss',   linestyle='-')
-plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
-plt.ylabel("Loss")
-plt.xlabel("Epoch")
-plt.legend()
-plt.savefig('loss_linear_eval.png')
-
 # %% [markdown]
 # ### Full HAR Model
 
@@ -336,14 +328,6 @@ print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
 print("Model in last epoch", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_evaluation_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
-
-plt.figure(figsize=(12,8))
-plt.plot(training_history.history['loss'], label='Training loss',   linestyle='-')
-plt.plot(training_history.history['val_loss'], label='Validation loss', linestyle='--')
-plt.ylabel("Loss")
-plt.xlabel("Epoch")
-plt.legend()
-plt.savefig('loss_full_eval.png')
 
 # %% [markdown]
 # ## Extra: t-SNE Plots
@@ -402,7 +386,7 @@ for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
+#plt.savefig(f'tsne_plot_perplexity_{perplexity}.png', bbox_inches='tight')
 
 
 
@@ -443,18 +427,4 @@ legend = graph.legend_
 for j, label in enumerate(unique_labels):
     legend.get_texts()[j].set_text(label_list_full_name[label]) 
 plt.title(f"t-SNE plot of test set representations (perplexity={perplexity})", fontsize=16)
-plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
-
-
-simclr_utitlities.plot_sincnet_filter_response(
-    model=base_model,
-    fs=sampling_rate,
-    sincconv_layer_names=["sincconv"],
-    smooth_sigma=10,
-)
-
-simclr_utitlities.plot_sincnet_filter_scatter(
-    model=base_model,
-    fs=sampling_rate,
-    layer_name="sincconv",
-)
+#plt.savefig(f'tsne_plot_custom_colors_perplexity_{perplexity}.png', bbox_inches='tight')
