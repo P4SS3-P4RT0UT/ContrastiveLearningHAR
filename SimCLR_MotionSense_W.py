@@ -239,7 +239,7 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_base_model(input_shape, n_filters=48, model_name="base_model")
+base_model = simclr_models.create_base_model(input_shape, n_filters=12, model_name="base_model")
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 

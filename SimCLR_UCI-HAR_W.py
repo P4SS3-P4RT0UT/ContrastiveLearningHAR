@@ -184,7 +184,7 @@ lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 # transformation_function = simclr_utitlities.generate_combined_transform_function(trasnform_funcs_vectorized, indices=trasnformation_indices)
 
-base_model = simclr_models.create_base_model(input_shape, n_filters=48, model_name="base_model")
+base_model = simclr_models.create_base_model(input_shape, n_filters=12, model_name="base_model")
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
 
