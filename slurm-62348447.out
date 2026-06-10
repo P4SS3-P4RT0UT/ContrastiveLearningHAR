@@ -1,0 +1,180 @@
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) CCconfig        6)  ucx/1.14.1         11) flexiblas/3.3.1
+  2) gentoo/2023     7)  libfabric/1.18.0   12) blis/0.9.0
+  3) gcccore/.12.3   8)  pmix/4.2.4         13) StdEnv/2023
+  4) gcc/12.3        9)  ucc/1.2.0
+  5) hwloc/2.9.1     10) openmpi/4.1.5
+2026-06-06 09:10:37.935389: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2026-06-06 09:10:38.085174: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2026-06-06 09:10:38.166064: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2026-06-06 09:10:38.817344: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-06-06 09:11:11.513288: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+Num GPUs Available:  1
+Processing capture24_run/capture24/P006.csv.gz
+Processing capture24_run/capture24/P007.csv.gz
+Processing capture24_run/capture24/P008.csv.gz
+Processing capture24_run/capture24/P009.csv.gz
+Processing capture24_run/capture24/P010.csv.gz
+Processing capture24_run/capture24/P041.csv.gz
+Processing capture24_run/capture24/P042.csv.gz
+Processing capture24_run/capture24/P043.csv.gz
+Processing capture24_run/capture24/P044.csv.gz
+Processing capture24_run/capture24/P045.csv.gz
+Processing capture24_run/capture24/P081.csv.gz
+Processing capture24_run/capture24/P082.csv.gz
+Processing capture24_run/capture24/P083.csv.gz
+Processing capture24_run/capture24/P084.csv.gz
+Processing capture24_run/capture24/P085.csv.gz
+Processing capture24_run/capture24/P121.csv.gz
+Processing capture24_run/capture24/P122.csv.gz
+Processing capture24_run/capture24/P123.csv.gz
+Processing capture24_run/capture24/P124.csv.gz
+Processing capture24_run/capture24/P125.csv.gz
+Processing capture24_run/capture24/P016.csv.gz
+Processing capture24_run/capture24/P017.csv.gz
+Processing capture24_run/capture24/P018.csv.gz
+Processing capture24_run/capture24/P019.csv.gz
+Processing capture24_run/capture24/P020.csv.gz
+Processing capture24_run/capture24/P046.csv.gz
+Processing capture24_run/capture24/P047.csv.gz
+Processing capture24_run/capture24/P048.csv.gz
+Processing capture24_run/capture24/P049.csv.gz
+Processing capture24_run/capture24/P050.csv.gz
+Processing capture24_run/capture24/P086.csv.gz
+Processing capture24_run/capture24/P087.csv.gz
+Processing capture24_run/capture24/P088.csv.gz
+Processing capture24_run/capture24/P089.csv.gz
+Processing capture24_run/capture24/P090.csv.gz
+Processing capture24_run/capture24/P126.csv.gz
+Processing capture24_run/capture24/P127.csv.gz
+Processing capture24_run/capture24/P128.csv.gz
+Processing capture24_run/capture24/P129.csv.gz
+Processing capture24_run/capture24/P130.csv.gz
+Processing capture24_run/capture24/P036.csv.gz
+Processing capture24_run/capture24/P037.csv.gz
+Processing capture24_run/capture24/P038.csv.gz
+Processing capture24_run/capture24/P039.csv.gz
+Processing capture24_run/capture24/P040.csv.gz
+Processing capture24_run/capture24/P066.csv.gz
+Processing capture24_run/capture24/P067.csv.gz
+Processing capture24_run/capture24/P068.csv.gz
+Processing capture24_run/capture24/P069.csv.gz
+Processing capture24_run/capture24/P070.csv.gz
+Processing capture24_run/capture24/P116.csv.gz
+Processing capture24_run/capture24/P117.csv.gz
+Processing capture24_run/capture24/P118.csv.gz
+Processing capture24_run/capture24/P119.csv.gz
+Processing capture24_run/capture24/P120.csv.gz
+Processing capture24_run/capture24/P026.csv.gz
+Processing capture24_run/capture24/P027.csv.gz
+Processing capture24_run/capture24/P028.csv.gz
+Processing capture24_run/capture24/P029.csv.gz
+Processing capture24_run/capture24/P030.csv.gz
+Processing capture24_run/capture24/P071.csv.gz
+Processing capture24_run/capture24/P072.csv.gz
+Processing capture24_run/capture24/P073.csv.gz
+Processing capture24_run/capture24/P074.csv.gz
+Processing capture24_run/capture24/P075.csv.gz
+Processing capture24_run/capture24/P111.csv.gz
+Processing capture24_run/capture24/P112.csv.gz
+Processing capture24_run/capture24/P113.csv.gz
+Processing capture24_run/capture24/P114.csv.gz
+Processing capture24_run/capture24/P115.csv.gz
+Processing capture24_run/capture24/P151.csv.gz
+Processing capture24_run/capture24/P001.csv.gz
+Processing capture24_run/capture24/P002.csv.gz
+Processing capture24_run/capture24/P003.csv.gz
+Processing capture24_run/capture24/P004.csv.gz
+Processing capture24_run/capture24/P005.csv.gz
+Processing capture24_run/capture24/P056.csv.gz
+Processing capture24_run/capture24/P057.csv.gz
+Processing capture24_run/capture24/P058.csv.gz
+Processing capture24_run/capture24/P059.csv.gz
+Processing capture24_run/capture24/P060.csv.gz
+Processing capture24_run/capture24/P096.csv.gz
+Processing capture24_run/capture24/P097.csv.gz
+Processing capture24_run/capture24/P098.csv.gz
+Processing capture24_run/capture24/P099.csv.gz
+Processing capture24_run/capture24/P100.csv.gz
+Processing capture24_run/capture24/P136.csv.gz
+Processing capture24_run/capture24/P137.csv.gz
+Processing capture24_run/capture24/P138.csv.gz
+Processing capture24_run/capture24/P139.csv.gz
+Processing capture24_run/capture24/P140.csv.gz
+Processing capture24_run/capture24/P011.csv.gz
+Processing capture24_run/capture24/P012.csv.gz
+Processing capture24_run/capture24/P013.csv.gz
+Processing capture24_run/capture24/P014.csv.gz
+Processing capture24_run/capture24/P015.csv.gz
+Processing capture24_run/capture24/P051.csv.gz
+Processing capture24_run/capture24/P052.csv.gz
+Processing capture24_run/capture24/P053.csv.gz
+Processing capture24_run/capture24/P054.csv.gz
+Processing capture24_run/capture24/P055.csv.gz
+Processing capture24_run/capture24/P091.csv.gz
+Processing capture24_run/capture24/P092.csv.gz
+Processing capture24_run/capture24/P093.csv.gz
+Processing capture24_run/capture24/P094.csv.gz
+Processing capture24_run/capture24/P095.csv.gz
+Processing capture24_run/capture24/P131.csv.gz
+Processing capture24_run/capture24/P132.csv.gz
+Processing capture24_run/capture24/P133.csv.gz
+Processing capture24_run/capture24/P134.csv.gz
+Processing capture24_run/capture24/P135.csv.gz
+multiprocessing.pool.RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/multiprocessing/pool.py", line 48, in mapstar
+    return list(map(*args))
+           ^^^^^^^^^^^^^^^^
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/raw_data_processing.py", line 173, in process_single_file
+    df = pd.read_csv(file_path, compression='gzip', engine='pyarrow', dtype={4: str}, usecols=['time', 'x', 'y', 'z', 'annotation'])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 626, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/.venv/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1911, in read
+    df = self._engine.read()  # type: ignore[attr-defined]
+         ^^^^^^^^^^^^^^^^^^^
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/.venv/lib/python3.11/site-packages/pandas/io/parsers/arrow_parser_wrapper.py", line 266, in read
+    table = pyarrow_csv.read_csv(
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "pyarrow/_csv.pyx", line 1315, in pyarrow._csv.read_csv
+  File "pyarrow/_csv.pyx", line 1324, in pyarrow._csv.read_csv
+  File "pyarrow/error.pxi", line 155, in pyarrow.lib.pyarrow_internal_check_status
+  File "pyarrow/error.pxi", line 89, in pyarrow.lib.check_status
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/gzip.py", line 301, in read
+    return self._buffer.read(size)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/_compression.py", line 68, in readinto
+    data = self.read(len(byte_view))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/gzip.py", line 518, in read
+    raise EOFError("Compressed file ended before the "
+EOFError: Compressed file ended before the end-of-stream marker was reached
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/SimCLR_CAPTURE24_J.py", line 77, in <module>
+    user_datasets = raw_data_processing.process_capture24_accelerometer_files(accelerometer_data_folder_path)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/lustre06/project/6081099/laber/ContrastiveLearningHAR/raw_data_processing.py", line 196, in process_capture24_accelerometer_files
+    results = pool.map(process_func, all_files)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/multiprocessing/pool.py", line 367, in map
+    return self._map_async(func, iterable, mapstar, chunksize).get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/lib/python3.11/multiprocessing/pool.py", line 774, in get
+    raise self._value
+EOFError: Compressed file ended before the end-of-stream marker was reached
