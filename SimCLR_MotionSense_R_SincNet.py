@@ -245,7 +245,7 @@ simclr_model.summary()
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
-simclr_model_save_path = f"{working_directory}{start_time_str}_simclr_ms_j.keras"
+simclr_model_save_path = f"{working_directory}{start_time_str}_sinctpn_pretraining.keras"
 trained_simclr_model.save(simclr_model_save_path)
 
 # SimCLR pre-training (NT-Xent (contrastive) loss)
@@ -270,7 +270,7 @@ tag = "linear_eval"
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
 linear_evaluation_model = simclr_models.create_linear_model_from_base_model(simclr_model, output_shape, intermediate_layer=8)
 
-linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
+linear_eval_best_model_file_name = f"{working_directory}{start_time_str}_sinctpn_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(linear_eval_best_model_file_name,
     monitor='val_loss', mode='min', save_best_only=True, save_weights_only=False, verbose=0
 )
@@ -304,7 +304,7 @@ tag = "full_eval"
 simclr_model = tf.keras.models.load_model(simclr_model_save_path)
 full_evaluation_model = simclr_models.create_full_classification_model_from_base_model(simclr_model, output_shape, model_name="Sincnet", intermediate_layer=8, last_freeze_layer=5)
 
-full_eval_best_model_file_name = f"{working_directory}{start_time_str}_simclr_{tag}.keras"
+full_eval_best_model_file_name = f"{working_directory}{start_time_str}_sinctpn_{tag}.keras"
 best_model_callback = tf.keras.callbacks.ModelCheckpoint(full_eval_best_model_file_name,
     monitor='val_loss', mode='min', save_best_only=True, save_weights_only=False, verbose=0
 )
