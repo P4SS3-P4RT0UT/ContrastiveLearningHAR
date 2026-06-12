@@ -225,7 +225,6 @@ def normalise(data, mean, std):
     """
     Normalise data (Z-normalisation)
     """
-
     return ((data - mean) / std)
 
 def apply_label_map(y, label_map):

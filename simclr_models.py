@@ -523,7 +523,7 @@ class SincConv1D(tf.keras.layers.Layer):
         cfg.update(
             num_filters=self.num_filters,
             kernel_size=self.kernel_size,
-            sampling_rate=self.sampling,
+            sampling_rate=self.sampling_rate,
             min_low_hz=self.min_low_hz,
             min_band_hz=self.min_band_hz,
             depthwise=self.depthwise,
