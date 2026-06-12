@@ -78,7 +78,7 @@ def create_sinctpn_base_model(
     input_shape,
     num_sinc_filters: int,
     sinc_kernel_size: int,
-    sample_rate: float,
+    sampling_rate: float,
     model_name: str = "sinctpn_base_model",
     depthwise: bool = True
 ):
@@ -122,7 +122,7 @@ def create_sinctpn_base_model(
     x = SincConv1D(
         num_filters=num_sinc_filters,
         kernel_size=sinc_kernel_size,
-        sampling_rate=sample_rate,
+        sampling_rate=sampling_rate,
         depthwise=depthwise,
         name="sincconv",
     )(inputs)
@@ -523,7 +523,7 @@ class SincConv1D(tf.keras.layers.Layer):
         cfg.update(
             num_filters=self.num_filters,
             kernel_size=self.kernel_size,
-            sample_rate=self.sample_rate,
+            sampling_rate=self.sampling,
             min_low_hz=self.min_low_hz,
             min_band_hz=self.min_band_hz,
             depthwise=self.depthwise,
