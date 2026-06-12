@@ -145,8 +145,6 @@ with open(dataset_save_path + dataset_name_user_split, 'rb') as f:
 har_users = list(user_datasets.keys())
 train_users, test_users = get_fixed_split_users(har_users)
 
-train_users = train_users[:11] # select a subset of users for training
-
 print(f'Testing: {test_users}, Training: {train_users}')
 
 # %% [markdown]

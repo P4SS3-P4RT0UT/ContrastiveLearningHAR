@@ -74,12 +74,12 @@ def create_base_model(input_shape, n_filters, model_name="base_model"):
 
     return tf.keras.Model(inputs, x, name=model_name)
 
-def create_sincnet_base_model(
+def create_sinctpn_base_model(
     input_shape,
     num_sinc_filters: int,
     sinc_kernel_size: int,
     sample_rate: float,
-    model_name: str = "sincnet_base_model",
+    model_name: str = "sinctpn_base_model",
     depthwise: bool = True
 ):
     """
@@ -122,7 +122,7 @@ def create_sincnet_base_model(
     x = SincConv1D(
         num_filters=num_sinc_filters,
         kernel_size=sinc_kernel_size,
-        sample_rate=sample_rate,
+        sampling_rate=sample_rate,
         depthwise=depthwise,
         name="sincconv",
     )(inputs)
@@ -299,9 +299,6 @@ def extract_intermediate_model_from_base_model(base_model, intermediate_layer=7)
     return model
 
 
-
-
-
 @tf.keras.utils.register_keras_serializable(package="simclr_models")
 class SincConv1D(tf.keras.layers.Layer):
     """
@@ -309,6 +306,7 @@ class SincConv1D(tf.keras.layers.Layer):
 
     Each filter is defined by two learnable parameters (lower cutoff f1 and
     bandwidth b), enforcing a bandpass shape:
+
         h[n] = 2*f2*sinc(2*f2*n) - 2*f1*sinc(2*f1*n),  f2 = f1 + |b|
 
     Two modes are supported via the `depthwise` argument:
@@ -322,10 +320,6 @@ class SincConv1D(tf.keras.layers.Layer):
     depthwise=False
         A single shared filter bank applied across all channels jointly.
         Input  (batch, time, C)  ->  output  (batch, time, num_filters)
-
-    In both modes the layer is named "sincconv" in the model graph, so
-    plot_sincnet_filter_response always uses sincconv_layer_names=["sincconv"].
-    Switching between modes is a single argument change; no other code changes.
 
     Reference
     ---------
@@ -354,59 +348,74 @@ class SincConv1D(tf.keras.layers.Layer):
         self,
         num_filters: int,
         kernel_size: int,
-        sample_rate: float = 50.0,
+        sampling_rate: float,
         min_low_hz: float = 0.1,
         min_band_hz: float = 0.5,
         depthwise: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.kernel_size = kernel_size if kernel_size % 2 != 0 else kernel_size + 1
+        self.kernel_size = kernel_size if kernel_size % 2 != 0 else kernel_size + 1 # force odd kernel size
         self.num_filters = num_filters
-        self.sample_rate = sample_rate
-        self.min_low_hz  = min_low_hz
+        self.sampling_rate = sampling_rate
+        self.min_low_hz = min_low_hz
         self.min_band_hz = min_band_hz
-        self.depthwise   = depthwise
+        self.depthwise = depthwise
 
     def build(self, input_shape):
+        
         num_channels = int(input_shape[-1])
         self._num_channels = num_channels
 
-        nyquist   = self.sample_rate / 2.0
+        nyquist = self.sampling_rate / 2.0
+
+        # linearly space the cutoff frequencies in the range [min_low_hz, nyquist - (min_low_hz + min_band_hz)]
         hz_points = np.linspace(
-            self.min_low_hz,
+            self.min_low_hz, 
             nyquist - (self.min_low_hz + self.min_band_hz),
             self.num_filters + 1,
         )
-        f1_init   = (hz_points[:-1] / nyquist).astype(np.float32)
+
+        # set the initial f1 and band parameters based on the linearly spaced cutoff frequencies
+        # normalise to Nyquist
+        f1_init = (hz_points[:-1] / nyquist).astype(np.float32)
         band_init = ((hz_points[1:] - hz_points[:-1]) / nyquist).astype(np.float32)
 
+        # shape (num_channels, num_filters): independent bank per channel
         if self.depthwise:
-            # Shape (num_channels, num_filters): independent bank per channel
-            self.f1_   = self.add_weight(
-                name="f1",
+            
+            # lower cutoff f1
+            self.f1_ = self.add_weight( 
+                name="f1", 
                 shape=(num_channels, self.num_filters),
                 initializer=tf.constant_initializer(
                     np.tile(f1_init, (num_channels, 1))
                 ),
                 trainable=True,
             )
+
+            # bandwidth
             self.band_ = self.add_weight(
-                name="band",
+                name="band", 
                 shape=(num_channels, self.num_filters),
                 initializer=tf.constant_initializer(
                     np.tile(band_init, (num_channels, 1))
                 ),
                 trainable=True,
             )
+
+        # shape (num_filters,): single shared bank
         else:
-            # Shape (num_filters,): single shared bank
-            self.f1_   = self.add_weight(
+            
+            # lower cutoff f1
+            self.f1_ = self.add_weight(
                 name="f1",
                 shape=(self.num_filters,),
                 initializer=tf.constant_initializer(f1_init),
                 trainable=True,
             )
+
+            # bandwidth
             self.band_ = self.add_weight(
                 name="band",
                 shape=(self.num_filters,),
@@ -414,8 +423,11 @@ class SincConv1D(tf.keras.layers.Layer):
                 trainable=True,
             )
 
-        half = (self.kernel_size - 1) // 2
-        self.n_      = tf.cast(tf.range(-half, half + 1), tf.float32)
+        # get filter taps indices
+        midpoint = (self.kernel_size - 1) // 2
+        self.n_ = tf.cast(tf.range(-midpoint, midpoint + 1), tf.float32)
+
+        # pre-compute the Hamming window
         self.window_ = tf.signal.hamming_window(self.kernel_size, periodic=False)
 
         super().build(input_shape)
@@ -433,27 +445,46 @@ class SincConv1D(tf.keras.layers.Layer):
         -------
         tf.Tensor  shape (kernel_size, 1, num_filters)
         """
-        nyquist  = self.sample_rate / 2.0
-        min_low  = self.min_low_hz  / nyquist
+        nyquist = self.sampling_rate / 2.0
+
+        min_low = self.min_low_hz / nyquist
         min_band = self.min_band_hz / nyquist
 
-        f1 = tf.abs(f1_norm)   + min_low
-        f2 = tf.clip_by_value(f1 + tf.abs(band_norm) + min_band, 0.0, 1.0)
+        f1 = tf.abs(f1_norm) + min_low # f1 = |f1| + min_low to ensure f1 > min_low
+        f2 = tf.clip_by_value(f1 + tf.abs(band_norm) + min_band, 0.0, 1.0) # f2 = f1 + |b| + min_band to ensure f2 > min_band, clip values to 0 or 1 if out of bounds
 
-        n  = tf.reshape(self.n_, (-1, 1))   # (kernel_size, 1)
-        f1 = tf.reshape(f1,      ( 1, -1))  # (1, num_filters)
-        f2 = tf.reshape(f2,      ( 1, -1))
+        # reshape before constructing bandpass filters
+        f1 = tf.reshape(f1, ( 1, -1)) # (1, num_filters)
+        f2 = tf.reshape(f2, ( 1, -1))
+
+        n  = tf.reshape(self.n_, (-1, 1)) # (kernel_size, 1)
+        window = tf.reshape(self.window_, (-1, 1))
 
         def sinc(x):
+            """
+            Calculate sinc(x) = sin(pi*x) / (pi*x)
+
+            Parameters
+            ----------
+            x : tf.Tensor  shape (kernel_size, num_filters)
+
+            Returns
+            -------
+            tf.Tensor  shape (kernel_size, 1, num_filters)
+            """
             px = np.pi * x
-            is_zero = tf.cast(tf.abs(x) < 1e-7, tf.float32)
-            return tf.math.divide_no_nan(tf.sin(px), px) + is_zero
+            is_zero = tf.cast(tf.abs(x) < 1e-7, tf.float32) # check if x is zero
+            return tf.math.divide_no_nan(tf.sin(px), px) + is_zero # returns either sinc(x) or 1 if x is zero
 
-        bp  = 2.0*f2*sinc(2.0*f2*n) - 2.0*f1*sinc(2.0*f1*n)
-        bp  = bp * tf.reshape(self.window_, (-1, 1))
-        bp  = bp / (tf.reduce_sum(tf.abs(bp), axis=0, keepdims=True) + 1e-8)
+        bandpass = 2.0*f2*sinc(f2*n) - 2.0*f1*sinc(f1*n)
+        bandpass = bandpass * window
 
-        return tf.reshape(bp, (self.kernel_size, 1, self.num_filters))
+        # normalise filters to have unit L1 norm (sum of absolute values)
+        scaler = (tf.reduce_sum(tf.abs(bandpass), axis=0, keepdims=True) + 1e-8)
+        # scaler = (tf.reduce_max(tf.abs(bandpass), axis=0, keepdims=True) + 1e-8) # peak normalisation
+        bandpass = bandpass / scaler
+
+        return tf.reshape(bandpass, (self.kernel_size, 1, self.num_filters))
 
     def call(self, inputs):
         """
@@ -466,21 +497,23 @@ class SincConv1D(tf.keras.layers.Layer):
         depthwise=True  : tf.Tensor  (batch, time, channels * num_filters)
         depthwise=False : tf.Tensor  (batch, time, num_filters)
         """
+
+        # apply per-channel filter bank and concatenate outputs along the feature axis
         if self.depthwise:
             # self.f1_ / self.band_ : (num_channels, num_filters)
-            # Apply per-channel filter bank inside call() — valid on both
-            # eager tensors and Keras symbolic tensors (KerasTensor).
             channel_outputs = []
+
             for ch in range(self._num_channels):
-                filters  = self._make_filters(self.f1_[ch], self.band_[ch])
+                filters = self._make_filters(self.f1_[ch], self.band_[ch])
                 ch_input = tf.expand_dims(inputs[..., ch], axis=-1)
                 channel_outputs.append(
                     tf.nn.conv1d(ch_input, filters, stride=1, padding="SAME")
                 )
             return tf.concat(channel_outputs, axis=-1)
+
+        # tile filters across channels for a standard grouped convolution
         else:
             # self.f1_ / self.band_ : (num_filters,)
-            # Tile filters across channels for a standard grouped convolution.
             filters = self._make_filters(self.f1_, self.band_)
             filters_tiled = tf.tile(filters, [1, self._num_channels, 1])
             return tf.nn.conv1d(inputs, filters_tiled, stride=1, padding="SAME")

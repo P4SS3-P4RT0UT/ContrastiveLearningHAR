@@ -143,8 +143,6 @@ with open(dataset_save_path + dataset_name_user_split, 'rb') as f:
 har_users = list(user_datasets.keys())
 train_users, test_users = get_fixed_split_users(har_users)
 
-train_users = train_users[:11] # select a subset of users for training
-
 print(f'Testing: {test_users}, Training: {train_users}')
 
 # %% [markdown]
@@ -241,11 +239,9 @@ tf.keras.backend.set_floatx('float32')
 lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.1, decay_steps=decay_steps)
 optimizer = tf.keras.optimizers.SGD(lr_decayed_fn)
 
-base_model = simclr_models.create_sincnet_base_model(input_shape, model_name="sincnet_base_model", num_sinc_filters=4, sinc_kernel_size=101, sample_rate=sampling_rate, depthwise=True)
+base_model = simclr_models.create_sinctpn_base_model(input_shape, model_name="sinctpn_base_model", num_sinc_filters=4, sinc_kernel_size=101, sampling_rate=sampling_rate, depthwise=True)
 simclr_model = simclr_models.attach_simclr_head(base_model)
 simclr_model.summary()
-
-simclr_utitlities.print_layer_indices(simclr_model)
 
 trained_simclr_model, epoch_losses = simclr_utitlities.simclr_train_model(simclr_model, np_train[0], optimizer, batch_size, transformation_function, temperature=temperature, epochs=epochs, is_trasnform_function_vectorized=True, verbose=1)
 
@@ -290,7 +286,6 @@ training_history = linear_evaluation_model.fit(
 )
 
 linear_eval_best_model = tf.keras.models.load_model(linear_eval_best_model_file_name)
-simclr_utitlities.print_layer_indices(linear_eval_best_model)
 
 print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(linear_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
@@ -325,7 +320,6 @@ training_history = full_evaluation_model.fit(
 )
 
 full_eval_best_model = tf.keras.models.load_model(full_eval_best_model_file_name)
-simclr_utitlities.print_layer_indices(full_eval_best_model)
 
 print("Model with lowest validation Loss:", flush=True)
 print(simclr_utitlities.evaluate_model_simple(full_eval_best_model.predict(np_test[0]), np_test[1], return_dict=True), flush=True)
